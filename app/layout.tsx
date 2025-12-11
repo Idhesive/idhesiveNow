@@ -3,6 +3,7 @@ import { Noto_Sans_KR } from 'next/font/google';
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "@/components/ui/sonner";
+import QtiClientInit from "@/components/qti/qti-client-init";
 
 const notoSansKR = Noto_Sans_KR({
   weight: ['300', '400', '500', '700'],
@@ -29,11 +30,13 @@ export default function RootLayout({
       <body
         className={` antialiased`}
       >
-        <NextTopLoader showSpinner={false} height={6} color="#000000" />
-        <Toaster richColors position="top-right" />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <QtiClientInit>
+          <NextTopLoader showSpinner={false} height={6} color="#000000" />
+          <Toaster richColors position="top-right" />
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </QtiClientInit>
       </body>
     </html>
   );

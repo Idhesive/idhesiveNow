@@ -171,3 +171,250 @@
     @apply p-8 mx-auto max-w-screen;
   }
 }
+
+/* QTI Components Styling */
+
+/*
+ * @citolab/qti-components CSS Variable Overrides
+ * These variables are inherited by the web components' Shadow DOM
+ * See: https://github.com/Citolab/qti-components
+ *
+ * Note: This app uses a dark-first theme. The QTI library defaults to light mode,
+ * so we override all variables with dark-appropriate values.
+ */
+
+/* QTI Library Variables - Dark Theme (this app is dark-first) */
+:root {
+  /* Core backgrounds - dark theme */
+  --qti-bg: #1f2937;
+  --qti-hover-bg: #374151;
+  --qti-disabled-bg: #374151;
+  --qti-disabled-color: #9ca3af;
+
+  /* Selection/Active states - dark theme with green accent */
+  --qti-bg-active: #064e3b;
+  --qti-border-active: #10b981;
+  --qti-light-bg-active: #065f46;
+  --qti-light-border-active: #34d399;
+  --qti-dark-bg-active: #064e3b;
+  --qti-dark-border-active: #10b981;
+
+  /* Borders - dark theme */
+  --qti-border-color: #6b7280;
+  --qti-border-thickness: 2px;
+  --qti-border-style: solid;
+  --qti-border-radius: 0.5rem;
+
+  /* Focus - dark theme */
+  --qti-focus-color: rgba(96, 165, 250, 0.5);
+  --qti-focus-border-width: 3px;
+
+  /* Correct/Incorrect feedback - dark theme */
+  --qti-correct: #10b981;
+  --qti-correct-light: #064e3b;
+  --qti-incorrect: #f87171;
+  --qti-incorrect-light: #7f1d1d;
+  --qti-partially-correct: #fbbf24;
+  --qti-partially-correct-light: #78350f;
+
+  /* Validation - dark theme */
+  --qti-validation-error-bg: #7f1d1d;
+  --qti-validation-text: #fecaca;
+
+  /* Spacing */
+  --qti-gap-size: 1rem;
+  --qti-padding-vertical: 0.75rem;
+  --qti-padding-horizontal: 1rem;
+  --qti-form-size: 1.25rem;
+
+  /* Custom variables for our QTI styling */
+  --qti-custom-border-default: #4b5563;
+  --qti-custom-border-hover: #6b7280;
+  --qti-custom-bg-hover: #374151;
+}
+
+/* QTI Item Container */
+qti-item {
+  @apply block w-full;
+}
+
+/* QTI Assessment Item */
+qti-assessment-item {
+  @apply block w-full;
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+}
+
+/* QTI Item Body - Main content area */
+qti-item-body {
+  @apply block space-y-4;
+}
+
+qti-item-body p {
+  @apply text-base leading-relaxed mb-4 text-foreground;
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+/* QTI Choice Interaction - Multiple Choice Questions */
+qti-choice-interaction {
+  @apply block mt-6 space-y-3;
+}
+
+/* QTI Simple Choice - Individual choice options */
+qti-simple-choice {
+  @apply block relative cursor-pointer transition-all duration-200;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--qti-custom-border-default);
+  border-radius: var(--qti-border-radius);
+  background-color: var(--qti-bg);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-foreground);
+  min-height: 3rem;
+}
+
+qti-simple-choice:hover {
+  border-color: var(--qti-custom-border-hover);
+  background-color: var(--qti-custom-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+qti-simple-choice:focus-within {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+}
+
+/* Selected state for choice */
+qti-simple-choice[aria-checked="true"],
+qti-simple-choice.qti-selected {
+  border-color: var(--qti-border-active);
+  background-color: var(--qti-bg-active);
+  font-weight: 500;
+}
+
+/*
+ * Note: qti-simple-choice uses Shadow DOM with ::part(ch) and ::part(cha)
+ * for radio/checkbox visuals. The library's internal styles use our CSS
+ * variables (--qti-border-color, --qti-border-active, etc.) which we
+ * override above for dark mode support.
+ */
+
+/* Text Entry Interaction */
+qti-text-entry-interaction {
+  @apply block mt-4;
+}
+
+qti-text-entry-interaction input {
+  @apply w-full px-4 py-3 rounded-lg border-2 transition-colors;
+  border-color: var(--qti-border-color);
+  background-color: var(--qti-bg);
+  color: var(--color-foreground);
+  font-size: 1rem;
+}
+
+qti-text-entry-interaction input:hover {
+  border-color: var(--qti-border-active);
+}
+
+qti-text-entry-interaction input:focus {
+  outline: var(--qti-focus-border-width) solid var(--qti-focus-color);
+  outline-offset: 2px;
+  border-color: var(--qti-border-active);
+}
+
+/* Inline Choice Interaction */
+qti-inline-choice-interaction {
+  @apply inline-block mx-1;
+}
+
+qti-inline-choice-interaction select {
+  @apply px-3 py-2 rounded-md border-2 transition-colors;
+  border-color: var(--qti-border-color);
+  background-color: var(--qti-bg);
+  color: var(--color-foreground);
+  font-size: 1rem;
+  min-width: 120px;
+  cursor: pointer;
+}
+
+qti-inline-choice-interaction select:hover {
+  border-color: var(--qti-border-active);
+}
+
+qti-inline-choice-interaction select:focus {
+  outline: var(--qti-focus-border-width) solid var(--qti-focus-color);
+  outline-offset: 2px;
+  border-color: var(--qti-border-active);
+}
+
+/* Inline Choice Options */
+qti-inline-choice {
+  @apply block py-1;
+}
+
+/* QTI Prompt - Question stem */
+qti-prompt {
+  @apply block font-medium mb-4 text-foreground;
+  font-size: 1.125rem;
+}
+
+/* Feedback styling - dark theme by default */
+qti-feedback-inline,
+qti-feedback-block {
+  @apply block mt-3 p-3 rounded-lg border-l-4;
+}
+
+qti-feedback-inline[outcome-identifier="CORRECT"],
+qti-feedback-block[outcome-identifier="CORRECT"] {
+  @apply bg-green-950 border-green-600 text-green-100;
+}
+
+qti-feedback-inline[outcome-identifier="INCORRECT"],
+qti-feedback-block[outcome-identifier="INCORRECT"] {
+  @apply bg-red-950 border-red-600 text-red-100;
+}
+
+/* Extended Text Interaction - Essay questions */
+qti-extended-text-interaction textarea {
+  @apply w-full px-4 py-3 rounded-lg border-2 transition-colors;
+  border-color: var(--qti-border-color);
+  background-color: var(--qti-bg);
+  color: var(--color-foreground);
+  font-size: 1rem;
+  min-height: 150px;
+  resize: vertical;
+}
+
+qti-extended-text-interaction textarea:hover {
+  border-color: var(--qti-border-active);
+}
+
+qti-extended-text-interaction textarea:focus {
+  outline: var(--qti-focus-border-width) solid var(--qti-focus-color);
+  outline-offset: 2px;
+  border-color: var(--qti-border-active);
+}
+
+/* QTI Item Container Wrapper */
+.qti-item-container {
+  @apply rounded-lg border border-border bg-card p-6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  qti-simple-choice {
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+  }
+
+  qti-item-body p {
+    font-size: 1rem;
+  }
+
+  qti-prompt {
+    font-size: 1rem;
+  }
+}

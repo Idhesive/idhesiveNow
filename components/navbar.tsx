@@ -5,7 +5,7 @@ import React from 'react'
 import { Button } from './ui/button'
 import SignOutForm from './sign-out-form'
 import Logo from './logo'
-import { GithubStars } from './github-stars'
+
 import { useUser } from '@/context/UserContext'
 
 export default function Navbar() {
@@ -48,7 +48,7 @@ export default function Navbar() {
                         </Button>
                      </>
                   )}
-                  <GithubStars />
+             
                </div>
             </nav>
          </div>
