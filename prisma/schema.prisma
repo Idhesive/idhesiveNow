@@ -1,6 +1,7 @@
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -8,16 +9,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// AUTHENTICATION (BetterAuth)
+// ============================================================================
+
 model User {
-  id            String       @id @default(uuid())
+  id            String    @id @default(uuid())
   email         String    @unique
   name          String?
   emailVerified Boolean
   image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+
+  // Learning relationships
+  learnerProfile      LearnerProfile?
+  questionResponses   QuestionResponse[]
+  topicRatings        LearnerTopicRating[]
+  knowledgeStates     LearnerKnowledgeState[]
+  learningPaths       LearnerLearningPath[]
+  studySessions       StudySession[]
+  assessmentSessions  AssessmentSession[]
+
+  // Progression & Rewards relationships
+  progression         LearnerProgression?
+  streak              LearnerStreak?
+  badges              LearnerBadge[]
+  achievements        LearnerAchievement[]
+  cosmetics           LearnerCosmetic[]
+  xpTransactions      XpTransaction[]
 
   @@map("user")
 }
@@ -26,8 +48,8 @@ model Session {
   id        String   @id
   expiresAt DateTime
   token     String
-  createdAt DateTime
-  updatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
   userId    String
@@ -50,8 +72,8 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
-  updatedAt             DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@map("account")
 }
@@ -61,8 +83,1514 @@ model Verification {
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
 
   @@map("verification")
+}
+
+// ============================================================================
+// CURRICULUM STRUCTURE
+// Hierarchy: Country → Curriculum → Subject → GradeLevel → Topic → Subtopic
+// ============================================================================
+
+model Country {
+  id        String   @id @default(uuid())
+  code      String   @unique // ISO 3166-1 alpha-2: "ZA", "US", etc.
+  name      String // "South Africa", "United States"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  curricula Curriculum[]
+
+  @@map("country")
+}
+
+model Curriculum {
+  id          String   @id @default(uuid())
+  countryId   String
+  country     Country  @relation(fields: [countryId], references: [id])
+  code        String   @unique // "CAPS", "CCSS", "IB"
+  name        String // "Curriculum and Assessment Policy Statement"
+  description String?
+  version     String? // "2011", "2024 Revision"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subjects Subject[]
+
+  @@map("curriculum")
+}
+
+model Subject {
+  id           String     @id @default(uuid())
+  curriculumId String
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id])
+  code         String // "MATH", "ENG", "SCIENCE"
+  name         String // "Mathematics", "English Home Language"
+  description  String?
+  color        String? // For UI: "#3B82F6"
+  icon         String? // Icon identifier
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  gradeLevels GradeLevel[]
+
+  @@unique([curriculumId, code])
+  @@map("subject")
+}
+
+model GradeLevel {
+  id          String   @id @default(uuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  grade       Int // 1-12 for school grades, could be 0 for pre-school
+  name        String // "Grade 4", "Year 5"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topics            Topic[]
+  termTopicMappings TermTopicMapping[]
+  learningPaths     LearningPath[]
+
+  @@unique([subjectId, grade])
+  @@map("grade_level")
+}
+
+// Topics are the core content units - can be hierarchical
+model Topic {
+  id           String     @id @default(uuid())
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  parentId     String? // For subtopics
+  parent       Topic?     @relation("TopicHierarchy", fields: [parentId], references: [id])
+  children     Topic[]    @relation("TopicHierarchy")
+
+  code           String // "FRAC-001", "ALG-QUAD-001"
+  name           String // "Fractions"
+  description    String?
+  learningGoals  String[] // Array of learning objectives
+  prerequisites  String[] // Topic codes that should be completed first
+  estimatedHours Float? // Estimated time to master
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  termMappings      TermTopicMapping[]
+  questionTopics    QuestionTopic[]
+  tutorialContent   TutorialContent[]
+  learnerRatings    LearnerTopicRating[]
+  learningPathItems LearningPathItem[]
+  standardAlignments StandardAlignment[] // External standards mappings
+
+  @@unique([gradeLevelId, code])
+  @@index([parentId])
+  @@map("topic")
+}
+
+// Maps topics to academic calendar (Term/Week)
+model TermTopicMapping {
+  id           String     @id @default(uuid())
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  topicId      String
+  topic        Topic      @relation(fields: [topicId], references: [id])
+  term         Int // 1-4 for South Africa
+  weekStart    Int // Week number within term (1-10)
+  weekEnd      Int? // Optional end week if topic spans multiple weeks
+  year         Int? // Academic year, null means "every year"
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([gradeLevelId, topicId, term, year])
+  @@index([term, weekStart])
+  @@map("term_topic_mapping")
+}
+
+// ============================================================================
+// EXTERNAL EDUCATIONAL STANDARDS
+// Support for international standards alignment (Common Core, NGSS, etc.)
+// ============================================================================
+
+// Major educational standards systems supported
+enum StandardSystem {
+  // United States
+  CCSS_MATH       // Common Core State Standards - Mathematics
+  CCSS_ELA        // Common Core State Standards - English Language Arts
+  NGSS            // Next Generation Science Standards
+
+  // International
+  IB_PYP          // International Baccalaureate - Primary Years Programme
+  IB_MYP          // International Baccalaureate - Middle Years Programme
+  IB_DP           // International Baccalaureate - Diploma Programme
+  CAMBRIDGE_PRIMARY    // Cambridge International - Primary
+  CAMBRIDGE_SECONDARY  // Cambridge International - Secondary
+  CAMBRIDGE_IGCSE     // Cambridge International - IGCSE
+
+  // Regional
+  UK_NATIONAL     // UK National Curriculum
+  AUSTRALIAN      // Australian Curriculum
+  SINGAPORE       // Singapore Curriculum Framework
+
+  // Technology/Digital Literacy
+  ISTE            // International Society for Technology in Education
+  CSTA            // Computer Science Teachers Association
+
+  // Other
+  CUSTOM          // User-defined standard system
+}
+
+// Defines a standards framework and its metadata
+model StandardFramework {
+  id          String         @id @default(uuid())
+  system      StandardSystem
+  version     String         // e.g., "2024", "v1.1"
+  name        String         // "Common Core State Standards for Mathematics"
+  description String?
+  publisher   String?        // "National Governors Association"
+  sourceUrl   String?        // Official documentation URL
+  country     String?        // ISO country code if regional
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  standards ExternalStandard[]
+
+  @@unique([system, version])
+  @@map("standard_framework")
+}
+
+// Individual standard codes (e.g., CCSS.MATH.CONTENT.4.NF.A.1)
+model ExternalStandard {
+  id           String            @id @default(uuid())
+  frameworkId  String
+  framework    StandardFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  parentId     String?           // For hierarchical standards
+  parent       ExternalStandard? @relation("StandardHierarchy", fields: [parentId], references: [id])
+  children     ExternalStandard[] @relation("StandardHierarchy")
+
+  // Standard identifier - the official code
+  code         String            // "CCSS.MATH.CONTENT.4.NF.A.1" or "4-PS3-1"
+  shortCode    String?           // Abbreviated form: "4.NF.A.1"
+
+  // Human-readable content
+  title        String            // "Add and subtract fractions with like denominators"
+  description  String?           // Full standard description
+
+  // Classification within the standard
+  domain       String?           // "Number & Operations—Fractions"
+  cluster      String?           // "Extend understanding of fraction equivalence"
+  gradeLevel   String?           // "4", "K-2", "HS"
+  category     String?           // For further grouping
+
+  // Metadata
+  sortOrder    Int               @default(0)
+  isActive     Boolean           @default(true)
+  metadata     Json?             // Additional standard-specific data
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  alignments StandardAlignment[]
+
+  @@unique([frameworkId, code])
+  @@index([parentId])
+  @@index([frameworkId, gradeLevel])
+  @@index([code]) // For fast lookup by code
+  @@map("external_standard")
+}
+
+// Alignment strength for mapping topics to standards
+enum AlignmentStrength {
+  PRIMARY      // Direct, primary alignment - the topic teaches this standard
+  SECONDARY    // Secondary alignment - the topic supports this standard
+  PARTIAL      // Partial coverage - only some aspects covered
+  PREREQUISITE // This topic is a prerequisite for the standard
+  EXTENSION    // This topic extends beyond the standard
+}
+
+// Maps internal topics to external standards (many-to-many)
+model StandardAlignment {
+  id          String            @id @default(uuid())
+  topicId     String
+  topic       Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  standardId  String
+  standard    ExternalStandard  @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  // Alignment details
+  strength    AlignmentStrength @default(PRIMARY)
+  coverage    Float?            // 0-1, what percentage of the standard is covered
+  notes       String?           // Explanation of alignment
+
+  // Verification
+  verifiedBy  String?           // User who verified this alignment
+  verifiedAt  DateTime?
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([topicId, standardId])
+  @@index([standardId])
+  @@index([topicId])
+  @@map("standard_alignment")
+}
+
+// ============================================================================
+// QUESTION BANK
+// QTI-based questions with rich metadata for searchability
+// ============================================================================
+
+enum QuestionType {
+  CHOICE // Single/Multiple choice
+  TEXT_ENTRY // Free text input
+  INLINE_CHOICE // Dropdown in text
+  GAP_MATCH // Drag and drop matching
+  MATCH // Match items
+  ORDER // Order items
+  HOTSPOT // Click on image
+  EXTENDED_TEXT // Long form answer
+  COMPOSITE // Parent question with parts
+}
+
+enum QuestionSource {
+  OFFICIAL_PAPER // From past exam papers
+  TEXTBOOK // From approved textbooks
+  AI_GENERATED // Generated by AI
+  SYNTHESIZED // Modified from another question
+  TEACHER_CREATED // Created by educators
+  COMMUNITY // Community contributed
+  IMPORTED // Imported from external source
+}
+
+enum DifficultyLevel {
+  FOUNDATIONAL // Below grade level
+  DEVELOPING // Working towards grade level
+  PROFICIENT // At grade level
+  ADVANCED // Above grade level
+  EXPERT // Significantly above grade level
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  publicId  String   @unique @default(cuid()) // URL-safe public identifier
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // QTI Content
+  qtiXml       String // Full QTI 3.0 XML
+  qtiVersion   String   @default("3.0") // QTI version
+  qtiIdentifier String? // Identifier from QTI XML
+
+  // Searchable Metadata (extracted from QTI for querying)
+  type           QuestionType
+  title          String
+  questionText   String // Plain text version for search
+  correctAnswers Json? // Correct answer(s) for automated scoring
+  maxScore       Float    @default(1.0)
+
+  // Classification
+  source         QuestionSource
+  sourceRef      String? // Reference to source (paper code, URL, etc.)
+  difficultyLevel DifficultyLevel @default(PROFICIENT)
+  estimatedTime  Int? // Seconds expected to answer
+
+  // Content tags for filtering
+  tags           String[] // ["algebra", "word-problem", "real-world"]
+  language       String   @default("en") // ISO 639-1
+
+  // Media & accessibility
+  hasImages      Boolean  @default(false)
+  hasMath        Boolean  @default(false)
+  hasAudio       Boolean  @default(false)
+  accessibilityNotes String?
+
+  // Status
+  isActive       Boolean  @default(true)
+  isReviewed     Boolean  @default(false)
+  reviewedAt     DateTime?
+  reviewedBy     String?
+
+  // Relationships
+  topics            QuestionTopic[]
+  responses         QuestionResponse[]
+  ratings           QuestionRating[]
+  revisions         QuestionRevision[]
+  parentQuestion    Question?  @relation("QuestionParts", fields: [parentQuestionId], references: [id])
+  parentQuestionId  String?
+  childQuestions    Question[] @relation("QuestionParts")
+  assessmentOrders  AssessmentQuestionOrder[]
+
+  @@index([type])
+  @@index([source])
+  @@index([difficultyLevel])
+  @@index([isActive, isReviewed])
+  @@map("question")
+}
+
+// Many-to-many: Questions can belong to multiple topics (cross-grade reuse)
+model QuestionTopic {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topicId    String
+  topic      Topic    @relation(fields: [topicId], references: [id])
+  isPrimary  Boolean  @default(false) // Primary topic for this question
+  relevance  Float    @default(1.0) // 0-1, how relevant to this topic
+  createdAt  DateTime @default(now())
+
+  @@unique([questionId, topicId])
+  @@index([topicId])
+  @@map("question_topic")
+}
+
+// Track question revisions for audit trail
+model QuestionRevision {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  version     Int
+  qtiXml      String
+  changedBy   String?
+  changeNotes String?
+  createdAt   DateTime @default(now())
+
+  @@unique([questionId, version])
+  @@map("question_revision")
+}
+
+// ============================================================================
+// TUTORIAL & LEARNING CONTENT
+// ============================================================================
+
+enum ContentType {
+  VIDEO
+  ARTICLE
+  INTERACTIVE
+  WORKED_EXAMPLE
+  PRACTICE_SET
+  ASSESSMENT
+  GAME
+}
+
+model TutorialContent {
+  id        String      @id @default(uuid())
+  topicId   String
+  topic     Topic       @relation(fields: [topicId], references: [id])
+  type      ContentType
+  title     String
+  description String?
+  content   Json // Flexible content structure
+  duration  Int? // Estimated minutes
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([topicId, type])
+  @@map("tutorial_content")
+}
+
+// ============================================================================
+// LEARNER TRACKING & ANALYTICS
+// xAPI-inspired response tracking
+// ============================================================================
+
+model LearnerProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Academic context
+  currentGrade Int?
+  schoolId     String?
+
+  // Preferences
+  preferredLanguage String @default("en")
+  dailyGoalMinutes  Int    @default(30)
+
+  // Aggregated stats (denormalized for performance)
+  totalQuestionsAnswered Int @default(0)
+  totalCorrect           Int @default(0)
+  totalTimeSpentSeconds  Int @default(0)
+  currentStreak          Int @default(0)
+  longestStreak          Int @default(0)
+  lastActiveAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("learner_profile")
+}
+
+// Individual question response with rich xAPI-style data
+// Designed for ML/prediction models and flexible scoring systems
+model QuestionResponse {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+
+  // Topic context - which topic was this attempt for?
+  // (questions can belong to multiple topics)
+  topicId    String?
+
+  // Session context
+  studySessionId     String?
+  studySession       StudySession? @relation(fields: [studySessionId], references: [id])
+  assessmentSessionId String?
+  assessmentSession   AssessmentSession? @relation(fields: [assessmentSessionId], references: [id])
+
+  // Response data
+  response       Json // The actual response in QTI format
+  responseText   String? // Plain text for analysis
+  isCorrect      Boolean?
+  score          Float? // Primary score (simple correct/incorrect or partial)
+  maxScore       Float? // Max possible (from question)
+  partialCredit  Json? // Breakdown: { "part1": 0.5, "part2": 1.0 } for composite questions
+
+  // Timing (xAPI-style) - critical for ML models
+  startedAt      DateTime
+  submittedAt    DateTime?
+  durationMs     Int? // Total time spent in milliseconds
+  timeToFirstAction Int? // Ms until first interaction (thinking time)
+  activeTimeMs   Int? // Time actively engaged (excludes idle)
+
+  // Interaction details
+  attemptNumber  Int      @default(1)
+  hintsUsed      Int      @default(0)
+  hintsAvailable Int      @default(0) // Total hints that were available
+  wasSkipped     Boolean  @default(false)
+  wasRevealed    Boolean  @default(false) // Answer was revealed
+  wasTimedOut    Boolean  @default(false) // Ran out of time
+
+  // Self-reported data (important for metacognition research)
+  confidenceLevel Int? // 1-5 self-reported confidence before seeing result
+  perceivedDifficulty Int? // 1-5 how hard did they think it was
+  flaggedForReview Boolean @default(false) // Did they mark for review?
+
+  // Response revision tracking - crucial for understanding thought process
+  responseHistory Json? // Array of {response, timestamp, action} if they changed answers
+  timesChanged    Int   @default(0)
+  finalAnswerTime Int? // Ms from start to final answer (before any changes back)
+
+  // Interaction events - detailed behavioral data for ML
+  // Stored as JSONB for flexibility, can be moved to separate table if volume is high
+  interactionEvents Json? // Array of {type, timestamp, data}
+  // Types: "focus", "blur", "scroll", "choice_select", "choice_deselect",
+  //        "text_input", "text_delete", "hint_request", "pause", "resume"
+
+  // Prior exposure - for spaced repetition and knowledge modeling
+  previousAttemptId String? // Link to previous attempt on same question
+  daysSinceLastAttempt Int? // For spaced repetition analysis
+  totalPriorAttempts Int @default(0) // How many times seen this question before
+
+  // Context for analysis
+  deviceType     String? // "mobile", "tablet", "desktop"
+  screenSize     String? // "small", "medium", "large"
+  inputMethod    String? // "touch", "mouse", "keyboard"
+  appVersion     String?
+  browserInfo    String? // User agent parsed
+
+  // Temporal context - important for fatigue/time-of-day analysis
+  localHour      Int? // Hour in user's timezone (0-23)
+  dayOfWeek      Int? // 0=Sunday, 6=Saturday
+  sessionPosition Int? // Which question # in this session (fatigue indicator)
+
+  // Rating snapshots at time of response - for rating system analysis
+  learnerRatingBefore Float?
+  learnerRatingAfter  Float?
+  learnerRDBefore     Float? // Rating deviation before
+  learnerRDAfter      Float? // Rating deviation after
+  questionRatingBefore Float?
+  questionRatingAfter Float?
+  questionRDBefore    Float?
+  questionRDAfter     Float?
+
+  // Multi-scoring support - link to detailed scores
+  scores ResponseScore[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, questionId])
+  @@index([userId, topicId])
+  @@index([userId, createdAt])
+  @@index([questionId, isCorrect])
+  @@index([studySessionId])
+  @@index([assessmentSessionId])
+  @@index([topicId, createdAt])
+  @@map("question_response")
+}
+
+// Flexible scoring system - multiple scoring algorithms per response
+enum ScoringAlgorithm {
+  SIMPLE          // Binary correct/incorrect
+  PARTIAL_CREDIT  // Weighted partial credit
+  GLICKO2         // Glicko-2 rating update
+  ELO             // Traditional ELO
+  IRT_1PL         // Item Response Theory 1-parameter
+  IRT_2PL         // Item Response Theory 2-parameter
+  IRT_3PL         // Item Response Theory 3-parameter (with guessing)
+  BKT             // Bayesian Knowledge Tracing
+  CUSTOM          // Custom algorithm
+}
+
+model ResponseScore {
+  id         String   @id @default(uuid())
+  responseId String
+  response   QuestionResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  // Scoring algorithm used
+  algorithm       ScoringAlgorithm
+  algorithmVersion String @default("1.0") // For reproducibility
+
+  // Score values
+  score           Float // The computed score
+  maxScore        Float? // Max possible for this algorithm
+  normalizedScore Float? // 0-1 normalized score
+
+  // Algorithm-specific parameters used (for reproducibility)
+  parameters      Json? // { "k_factor": 32 } for ELO, { "tau": 0.5 } for Glicko, etc.
+
+  // Algorithm-specific outputs
+  outputs         Json? // { "probability": 0.73, "information": 1.2 } for IRT, etc.
+
+  // Metadata
+  computedAt      DateTime @default(now())
+  isLatest        Boolean @default(true) // Most recent score for this algorithm
+  notes           String? // Any notes about this scoring
+
+  @@unique([responseId, algorithm, algorithmVersion, isLatest])
+  @@index([responseId, algorithm])
+  @@index([algorithm, computedAt])
+  @@map("response_score")
+}
+
+// Knowledge state tracking for Bayesian Knowledge Tracing and similar models
+model LearnerKnowledgeState {
+  id      String @id @default(uuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId String
+
+  // BKT parameters
+  pKnown          Float @default(0.5) // P(L) - probability of knowing
+  pLearn          Float @default(0.1) // P(T) - probability of learning
+  pGuess          Float @default(0.25) // P(G) - probability of guessing correctly
+  pSlip           Float @default(0.1) // P(S) - probability of slipping
+
+  // Additional knowledge modeling
+  masteryLevel    Float @default(0) // 0-1 mastery estimate
+  masteryVariance Float @default(0.25) // Uncertainty in mastery estimate
+
+  // For deep knowledge tracing / neural models
+  latentState     Json? // Embedding vector or hidden state
+
+  // History for analysis
+  stateHistory    Json? // Array of {pKnown, timestamp, responseId}
+
+  lastResponseId  String? // Last response that updated this state
+  lastUpdatedAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, topicId])
+  @@index([topicId, masteryLevel])
+  @@map("learner_knowledge_state")
+}
+
+// ============================================================================
+// ASSESSMENT TYPES & STUDY SESSIONS
+// Configurable assessment formats for different learning modes
+// ============================================================================
+
+// Primary assessment type categories
+enum AssessmentType {
+  // Fixed question sets
+  FIXED_ASSESSMENT      // Traditional test with predetermined questions
+  PRACTICE_SET          // Practice mode with fixed questions, no time pressure
+  QUIZ                  // Short quiz, typically 5-10 questions
+
+  // Adaptive assessments
+  ADAPTIVE_ASSESSMENT   // CAT-style adaptive testing
+  DIAGNOSTIC            // Diagnostic assessment to identify gaps
+  PLACEMENT             // Placement test to determine starting level
+
+  // Streaming/Continuous modes
+  PUZZLE_STREAK         // Lichess-style: increasingly difficult until X errors
+  PUZZLE_STORM          // Time-based: as many as possible in time limit
+  PUZZLE_RACER          // Race format: fixed questions, fastest time wins
+  ENDLESS_PRACTICE      // Infinite practice, no end condition
+
+  // Spaced repetition
+  REVIEW_SESSION        // Spaced repetition review of due items
+  FLASHCARD_DRILL       // Flashcard-style quick recall
+
+  // Competitive/Social
+  DUEL                  // 1v1 real-time competition
+  TOURNAMENT            // Multi-round tournament format
+  DAILY_CHALLENGE       // Daily puzzle/challenge (same for all users)
+
+  // Learning-focused
+  GUIDED_LESSON         // Tutorial with embedded questions
+  MASTERY_CHECK         // Check if topic is mastered before advancing
+
+  // Custom
+  CUSTOM                // User-defined assessment type
+}
+
+// How questions are selected for the assessment
+enum QuestionSelectionStrategy {
+  FIXED                 // Predetermined question set
+  RANDOM_FROM_POOL      // Random selection from question pool
+  ADAPTIVE_IRT          // IRT-based adaptive selection
+  ADAPTIVE_GLICKO       // Glicko-2 rating-based selection
+  ADAPTIVE_BKT          // BKT-based selection (target knowledge gaps)
+  SPACED_REPETITION     // Due for review based on SR algorithm
+  DIFFICULTY_LADDER     // Progressively harder questions
+  SPIRAL                // Cycles through topics with increasing difficulty
+  CUSTOM                // Custom selection logic
+}
+
+// Termination conditions for assessments
+enum TerminationCondition {
+  FIXED_COUNT           // After N questions
+  TIME_LIMIT            // After X minutes
+  ERROR_THRESHOLD       // After X errors (streak mode)
+  MASTERY_ACHIEVED      // When mastery threshold reached
+  CONFIDENCE_INTERVAL   // When ability estimate is precise enough (CAT)
+  USER_QUIT             // User ended session
+  ALL_QUESTIONS         // All questions in pool answered
+  CUSTOM                // Custom termination logic
+}
+
+// Assessment template - reusable configurations
+model AssessmentTemplate {
+  id          String         @id @default(uuid())
+  code        String         @unique // "puzzle-streak-math", "daily-challenge"
+  name        String         // "Math Puzzle Streak"
+  description String?
+
+  // Core configuration
+  assessmentType        AssessmentType
+  selectionStrategy     QuestionSelectionStrategy
+  terminationCondition  TerminationCondition
+
+  // Question pool constraints
+  topicIds              String[]        // Limit to specific topics
+  difficultyRange       Json?           // { min: "DEVELOPING", max: "ADVANCED" }
+  questionTypes         QuestionType[]  // Allowed question types
+  tags                  String[]        // Filter by tags
+
+  // Termination parameters
+  questionLimit         Int?            // Max questions (for FIXED_COUNT)
+  timeLimitSeconds      Int?            // Time limit (for TIME_LIMIT)
+  errorThreshold        Int?            // Max errors (for ERROR_THRESHOLD)
+  masteryThreshold      Float?          // 0-1 mastery level (for MASTERY_ACHIEVED)
+  confidenceThreshold   Float?          // For CAT termination
+
+  // Difficulty progression (for streaming modes)
+  startingDifficulty    Float?          // Initial difficulty (Glicko rating or 0-1)
+  difficultyIncrement   Float?          // How much harder per correct answer
+  difficultyDecrement   Float?          // How much easier per wrong answer
+
+  // Scoring configuration
+  basePointsPerQuestion Int             @default(10)
+  streakBonusMultiplier Float?          // e.g., 1.5x for 5+ streak
+  timeBonusEnabled      Boolean         @default(false)
+  partialCreditEnabled  Boolean         @default(true)
+
+  // UI/UX settings
+  showFeedbackAfterEach Boolean         @default(true)  // Immediate feedback
+  showCorrectAnswer     Boolean         @default(true)  // Show correct on wrong
+  allowSkip             Boolean         @default(false)
+  allowHints            Boolean         @default(true)
+  shuffleQuestions      Boolean         @default(true)
+  shuffleChoices        Boolean         @default(true)
+
+  // Time pressure settings
+  perQuestionTimeLimit  Int?            // Seconds per question (null = unlimited)
+  showTimer             Boolean         @default(true)
+  countdownWarning      Int?            // Warn at X seconds remaining
+
+  // Lives/Hearts system (for streak modes)
+  startingLives         Int?            // null = unlimited
+  earnExtraLifeEvery    Int?            // Earn life every N correct
+
+  // Leaderboard/Social
+  isRanked              Boolean         @default(false)
+  leaderboardEnabled    Boolean         @default(false)
+  dailyResetTime        String?         // "00:00" UTC for daily challenges
+
+  // Metadata
+  isActive              Boolean         @default(true)
+  isPublic              Boolean         @default(true) // Visible to all users
+  createdBy             String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  sessions AssessmentSession[]
+
+  @@index([assessmentType])
+  @@index([isActive, isPublic])
+  @@map("assessment_template")
+}
+
+// Individual assessment session (replaces StudySession for assessments)
+model AssessmentSession {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   AssessmentTemplate? @relation(fields: [templateId], references: [id])
+
+  // Session configuration (snapshot or custom)
+  assessmentType        AssessmentType
+  selectionStrategy     QuestionSelectionStrategy
+  terminationCondition  TerminationCondition
+  config                Json?           // Full config snapshot for reproducibility
+
+  // Focus
+  topicIds              String[]        // Topics being assessed
+
+  // State
+  status                SessionStatus   @default(IN_PROGRESS)
+  currentQuestionIndex  Int             @default(0)
+
+  // Timing
+  startedAt             DateTime        @default(now())
+  endedAt               DateTime?
+  totalTimeMs           Int?
+  pausedTimeMs          Int             @default(0)  // Total time spent paused
+
+  // Results
+  questionsAttempted    Int             @default(0)
+  questionsCorrect      Int             @default(0)
+  questionsSkipped      Int             @default(0)
+  totalScore            Float           @default(0)
+  maxPossibleScore      Float           @default(0)
+
+  // Streak tracking
+  currentStreak         Int             @default(0)
+  longestStreak         Int             @default(0)
+  streakBonusEarned     Float           @default(0)
+
+  // Lives system
+  livesRemaining        Int?            // null = unlimited
+  livesUsed             Int             @default(0)
+
+  // Difficulty tracking (for adaptive/streaming)
+  currentDifficulty     Float?          // Current target difficulty
+  difficultyHistory     Json?           // [{difficulty, questionIndex, timestamp}]
+
+  // Ability estimation (for CAT)
+  estimatedAbility      Float?          // Current ability estimate
+  abilityStandardError  Float?          // Confidence in estimate
+
+  // Termination
+  terminationReason     String?         // Why session ended
+
+  // Ranking (for competitive modes)
+  finalRank             Int?            // Position on leaderboard
+  percentile            Float?          // Percentile ranking
+
+  // Device/context
+  deviceType            String?
+  userAgent             String?
+  ipAddress             String?
+
+  // Relationships
+  responses             QuestionResponse[]
+  questionOrder         AssessmentQuestionOrder[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([userId, assessmentType])
+  @@index([templateId, startedAt])
+  @@index([status])
+  @@map("assessment_session")
+}
+
+// Track question order and per-question metadata for a session
+model AssessmentQuestionOrder {
+  id         String            @id @default(uuid())
+  sessionId  String
+  session    AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question          @relation(fields: [questionId], references: [id])
+
+  position        Int           // Order in the assessment (0-indexed)
+  targetDifficulty Float?       // Intended difficulty when selected
+  selectionReason String?       // Why this question was selected
+
+  // Timing
+  presentedAt     DateTime?     // When shown to user
+  answeredAt      DateTime?     // When answered
+  timeSpentMs     Int?
+
+  // Result
+  wasAnswered     Boolean       @default(false)
+  wasSkipped      Boolean       @default(false)
+  wasCorrect      Boolean?
+
+  createdAt       DateTime      @default(now())
+
+  @@unique([sessionId, position])
+  @@unique([sessionId, questionId])
+  @@index([questionId])
+  @@map("assessment_question_order")
+}
+
+enum SessionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  ABANDONED
+  TIMED_OUT
+}
+
+// Daily challenges - track completion and scores
+model DailyChallenge {
+  id           String   @id @default(uuid())
+  challengeDate DateTime @db.Date // The date of the challenge
+  templateId   String
+
+  // Pre-generated question set (same for all users)
+  questionIds  String[]
+
+  // Leaderboard
+  topScores    Json?    // [{userId, score, timeMs, rank}] cached top N
+
+  totalAttempts    Int  @default(0)
+  totalCompletions Int  @default(0)
+  averageScore     Float?
+
+  createdAt    DateTime @default(now())
+
+  @@unique([challengeDate, templateId])
+  @@index([challengeDate])
+  @@map("daily_challenge")
+}
+
+// User's attempt at a daily challenge
+model DailyChallengeAttempt {
+  id            String   @id @default(uuid())
+  userId        String
+  challengeDate DateTime @db.Date
+  templateId    String
+  sessionId     String?  // Link to AssessmentSession
+
+  score         Float
+  timeMs        Int
+  questionsCorrect Int
+  rank          Int?     // Position on leaderboard (updated async)
+
+  completedAt   DateTime @default(now())
+
+  @@unique([userId, challengeDate, templateId])
+  @@index([challengeDate, score])
+  @@map("daily_challenge_attempt")
+}
+
+// Legacy StudySession - keeping for backwards compatibility
+// Consider migrating to AssessmentSession
+model StudySession {
+  id       String @id @default(uuid())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Session type (legacy - use AssessmentSession.assessmentType instead)
+  mode     String // "assessment", "stream", "practice", "review"
+
+  // Focus
+  topicIds String[] // Topics being studied
+
+  // Timing
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  totalTimeMs Int?
+
+  // Results
+  questionsAttempted Int @default(0)
+  questionsCorrect   Int @default(0)
+  totalScore         Float @default(0)
+  maxPossibleScore   Float @default(0)
+
+  // Streaks & bonuses
+  longestStreak Int @default(0)
+  bonusPoints   Float @default(0)
+
+  // Device/context
+  deviceType String?
+  userAgent  String?
+  ipAddress  String?
+
+  responses QuestionResponse[]
+
+  @@index([userId, startedAt])
+  @@map("study_session")
+}
+
+// ============================================================================
+// ADAPTIVE LEARNING - RATING SYSTEM (Glicko-2 based)
+// ============================================================================
+
+// Learner's rating per topic
+model LearnerTopicRating {
+  id      String @id @default(uuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id])
+
+  // Glicko-2 parameters
+  rating           Float @default(1500) // Current rating
+  ratingDeviation  Float @default(350) // Uncertainty (RD)
+  volatility       Float @default(0.06) // Rating volatility
+
+  // Stats
+  totalAttempts    Int   @default(0)
+  correctAttempts  Int   @default(0)
+  lastAttemptAt    DateTime?
+
+  // History for analytics
+  ratingHistory    Json? // Array of {rating, rd, timestamp}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, topicId])
+  @@index([topicId, rating])
+  @@map("learner_topic_rating")
+}
+
+// Question's rating (difficulty) per topic
+model QuestionRating {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topicId    String // Rating can vary by topic context
+
+  // Glicko-2 parameters
+  rating          Float @default(1500)
+  ratingDeviation Float @default(350)
+  volatility      Float @default(0.06)
+
+  // Stats
+  totalAttempts   Int   @default(0)
+  correctAttempts Int   @default(0)
+
+  // Derived metrics
+  discriminationIndex Float? // How well it differentiates ability levels
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([questionId, topicId])
+  @@index([topicId, rating])
+  @@map("question_rating")
+}
+
+// ============================================================================
+// LEARNING PATHS
+// Structured sequences for guided learning
+// ============================================================================
+
+model LearningPath {
+  id           String     @id @default(uuid())
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+
+  name        String
+  description String?
+  isDefault   Boolean @default(false) // Default path for this grade
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    LearningPathItem[]
+  learners LearnerLearningPath[]
+
+  @@map("learning_path")
+}
+
+model LearningPathItem {
+  id             String       @id @default(uuid())
+  learningPathId String
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  topicId        String
+  topic          Topic        @relation(fields: [topicId], references: [id])
+
+  sortOrder       Int
+  estimatedHours  Float?
+  requiredMastery Float @default(0.7) // 70% to "complete" this item
+
+  @@unique([learningPathId, topicId])
+  @@index([learningPathId, sortOrder])
+  @@map("learning_path_item")
+}
+
+model LearnerLearningPath {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningPathId String
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id])
+
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  currentItemId String? // Current learning path item
+
+  // Progress tracking
+  itemsCompleted Int @default(0)
+  totalItems     Int
+
+  @@unique([userId, learningPathId])
+  @@map("learner_learning_path")
+}
+
+// ============================================================================
+// PROGRESSION & REWARDS SYSTEM
+// Gamification, badges, streaks, achievements, and visual identity
+// ============================================================================
+
+// Academic tiers based on Glicko-2 rating (competence)
+enum AcademicTier {
+  SEED           // 0-1000
+  SPROUT         // 1000-1200
+  SAPLING        // 1200-1400
+  TREE           // 1400-1600
+  GROVE          // 1600-1800
+  FOREST         // 1800-2000
+  ANCIENT_FOREST // 2000+
+}
+
+// Engagement levels based on XP (dedication)
+enum EngagementLevel {
+  NEWCOMER       // 0-500 XP
+  LEARNER        // 500-2000 XP
+  SCHOLAR        // 2000-5000 XP
+  DEDICATED      // 5000-10000 XP
+  DEVOTED        // 10000-25000 XP
+  EXPERT         // 25000-50000 XP
+  LEGENDARY      // 50000+ XP
+}
+
+// Core progression tracking per learner
+model LearnerProgression {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Academic Tier (competence-based)
+  academicTier        AcademicTier @default(SEED)
+  academicRating      Float        @default(1500)
+  academicRatingHistory Json?      // [{rating, timestamp}]
+
+  // Engagement Level (XP-based)
+  engagementLevel     EngagementLevel @default(NEWCOMER)
+  totalXp             Int          @default(0)
+  xpHistory           Json?        // [{xp, source, timestamp}]
+
+  // Visual Identity - equipped items
+  equippedBannerId    String?
+  equippedIconId      String?
+  equippedTitleId     String?
+  featuredBadgeIds    String[]     // Up to 5 featured badges
+
+  // Aggregated stats
+  totalBadgesEarned   Int @default(0)
+  totalAchievements   Int @default(0)
+  profileViews        Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("learner_progression")
+}
+
+// ============================================================================
+// STREAK SYSTEM
+// ============================================================================
+
+enum DailyGoalType {
+  QUESTIONS
+  MINUTES
+  SCORE
+}
+
+enum StreakAction {
+  ACTIVE          // Completed daily goal
+  FREEZE_USED     // Used a streak freeze
+  SHIELD_USED     // Auto-shield activated
+  GRACE_RESTORED  // Restored during grace period
+  GRACE_EXPIRED   // Grace period expired, streak reset
+  STREAK_BROKEN   // Streak ended
+  MILESTONE       // Hit a milestone (7, 14, 30, etc.)
+}
+
+model LearnerStreak {
+  id        String @id @default(uuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Current Streak
+  currentStreak       Int @default(0)
+  streakStartDate     DateTime?
+  lastActiveDate      DateTime?
+
+  // Records
+  longestStreak       Int @default(0)
+  longestStreakStart  DateTime?
+  longestStreakEnd    DateTime?
+  totalActiveDays     Int @default(0)
+
+  // Protection Mechanics
+  streakFreezes       Int @default(2)     // Available freezes (replenish monthly)
+  streakShields       Int @default(0)     // Auto-earned shields
+  graceExpiresAt      DateTime?           // When grace period ends
+  lastFreezeUsed      DateTime?
+  lastShieldEarned    DateTime?
+
+  // Daily Goal Configuration
+  dailyGoalType       DailyGoalType @default(QUESTIONS)
+  dailyGoalTarget     Int @default(10)
+  todayProgress       Int @default(0)
+  todayGoalMet        Boolean @default(false)
+  todayDate           DateTime? @db.Date   // Track which day todayProgress is for
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // History
+  history   StreakHistoryEntry[]
+
+  @@map("learner_streak")
+}
+
+model StreakHistoryEntry {
+  id          String   @id @default(uuid())
+  streakId    String
+  streak      LearnerStreak @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  date        DateTime @db.Date
+  wasActive   Boolean
+  streakCount Int
+
+  // What happened this day
+  action      StreakAction
+  details     Json?     // {freezeUsed: true, graceRestored: true, milestoneReached: 30, etc.}
+
+  createdAt   DateTime @default(now())
+
+  @@unique([streakId, date])
+  @@index([date])
+  @@map("streak_history_entry")
+}
+
+// ============================================================================
+// BADGE SYSTEM
+// ============================================================================
+
+enum BadgeCategory {
+  MASTERY        // Topic/subject competence
+  PROGRESS       // Growth and improvement
+  STREAK         // Consistency
+  CHALLENGE      // Optional competitive modes
+  EXPLORATION    // Breadth of learning
+  COMMUNITY      // Social engagement
+  SPECIAL        // Events, seasonal, etc.
+}
+
+enum BadgeTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+enum BadgeRarity {
+  COMMON        // 60-80% of learners
+  UNCOMMON      // 30-50%
+  RARE          // 10-20%
+  EPIC          // 3-8%
+  LEGENDARY     // <1%
+}
+
+model BadgeDefinition {
+  id           String @id @default(uuid())
+  code         String @unique  // "mastery_fractions_gold"
+
+  // Display
+  name         String          // "Fractions Master - Gold"
+  description  String          // "Achieve 80%+ accuracy on 30+ fraction questions"
+  iconUrl      String?
+
+  // Classification
+  category     BadgeCategory
+  tier         BadgeTier
+  rarity       BadgeRarity
+
+  // Unlock Criteria (structured JSON)
+  // Example: {type: "mastery", topicCode: "FRAC-*", minAccuracy: 0.8, minQuestions: 30}
+  criteria     Json
+
+  // Rewards for earning this badge
+  xpReward     Int @default(0)
+  unlocksTitle String?         // Title code if unlocks a title
+  unlocksBanner String?        // Banner code if unlocks a banner
+  unlocksIcon  String?         // Icon code if unlocks an icon
+
+  // Ordering & visibility
+  sortOrder    Int @default(0)
+  isActive     Boolean @default(true)
+  isHidden     Boolean @default(false) // Hidden until earned (surprise badges)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  earnedBy     LearnerBadge[]
+
+  @@index([category])
+  @@index([tier])
+  @@index([isActive])
+  @@map("badge_definition")
+}
+
+model LearnerBadge {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId     String
+  badge       BadgeDefinition @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  // When earned
+  earnedAt    DateTime @default(now())
+
+  // Context of earning
+  contextData Json?    // {topicId, assessmentId, streakCount, etc.}
+
+  // Display preferences
+  isFeatured  Boolean @default(false)  // Shown on profile (up to 5)
+  isNew       Boolean @default(true)   // Not yet viewed by user
+
+  @@unique([userId, badgeId])
+  @@index([userId, earnedAt])
+  @@index([badgeId])
+  @@map("learner_badge")
+}
+
+// ============================================================================
+// ACHIEVEMENT SYSTEM
+// ============================================================================
+
+enum AchievementCategory {
+  ACADEMIC      // Mastery-based
+  CHALLENGE     // Competitive modes
+  MILESTONE     // Volume/time
+  COMMUNITY     // Social
+  SPECIAL       // Events
+}
+
+enum AchievementDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  LEGENDARY
+}
+
+model AchievementDefinition {
+  id           String @id @default(uuid())
+  code         String @unique  // "subject_champion_math"
+
+  // Display
+  name         String          // "Subject Champion - Mathematics"
+  description  String          // "Achieve Gold+ mastery in 10+ math topics"
+  iconUrl      String?
+
+  // Classification
+  category     AchievementCategory
+  difficulty   AchievementDifficulty
+
+  // Unlock Criteria (complex conditions)
+  // Example: {type: "topic_mastery_count", subject: "MATH", minTier: "GOLD", minCount: 10}
+  criteria     Json
+
+  // Progress Tracking
+  hasProgress  Boolean @default(true)  // Can track partial progress
+  progressMax  Int?                    // e.g., 10 topics for "10+ topics" achievement
+
+  // Rewards
+  xpReward     Int @default(0)
+  badgeReward  String?         // Badge code
+  titleReward  String?         // Title code
+  bannerReward String?         // Banner code
+  iconReward   String?         // Icon code
+
+  isActive     Boolean @default(true)
+  sortOrder    Int @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  earnedBy     LearnerAchievement[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("achievement_definition")
+}
+
+model LearnerAchievement {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId  String
+  achievement    AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  // Progress (for trackable achievements)
+  currentProgress Int @default(0)
+  isCompleted     Boolean @default(false)
+
+  // When completed
+  completedAt     DateTime?
+
+  // Context
+  contextData     Json?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, achievementId])
+  @@index([userId, isCompleted])
+  @@index([achievementId])
+  @@map("learner_achievement")
+}
+
+// ============================================================================
+// COSMETIC ITEMS (Banners, Icons, Titles)
+// ============================================================================
+
+enum CosmeticType {
+  BANNER
+  ICON
+  TITLE
+  PROFILE_FRAME
+  EFFECT        // Animated effects
+}
+
+enum CosmeticRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum UnlockMethod {
+  TIER          // Academic or engagement tier
+  BADGE         // Earn specific badge
+  ACHIEVEMENT   // Complete achievement
+  XP            // Reach XP threshold
+  STREAK        // Reach streak milestone
+  SPECIAL       // Event, gift, etc.
+  DEFAULT       // Available from start
+}
+
+model CosmeticItem {
+  id          String @id @default(uuid())
+  code        String @unique  // "banner_phoenix_rising"
+
+  // Display
+  name        String          // "Phoenix Rising"
+  description String?
+  previewUrl  String?         // Preview image
+  assetUrl    String?         // Actual asset
+
+  // Classification
+  type        CosmeticType
+  rarity      CosmeticRarity
+
+  // Unlock Requirements
+  unlockMethod UnlockMethod
+  unlockCriteria Json?
+  // Examples:
+  // {method: "tier", academicTier: "GROVE"}
+  // {method: "badge", badgeCode: "streak_30_day"}
+  // {method: "achievement", achievementCode: "subject_champion_math"}
+  // {method: "xp", minXp: 10000}
+  // {method: "streak", minStreak: 30}
+
+  isActive    Boolean @default(true)
+  sortOrder   Int @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  unlockedBy  LearnerCosmetic[]
+
+  @@index([type])
+  @@index([unlockMethod])
+  @@index([isActive])
+  @@map("cosmetic_item")
+}
+
+model LearnerCosmetic {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticId  String
+  cosmetic    CosmeticItem @relation(fields: [cosmeticId], references: [id], onDelete: Cascade)
+
+  unlockedAt  DateTime @default(now())
+  isEquipped  Boolean @default(false)
+
+  @@unique([userId, cosmeticId])
+  @@index([userId, isEquipped])
+  @@map("learner_cosmetic")
+}
+
+// ============================================================================
+// XP TRANSACTIONS
+// ============================================================================
+
+enum XpSource {
+  QUESTION_ANSWERED     // +10 per question
+  QUESTION_CORRECT      // +5 bonus for correct
+  STREAK_DAY            // +20 per streak day
+  STREAK_MILESTONE      // +50/100/200 for milestones
+  BADGE_EARNED          // Variable per badge
+  ACHIEVEMENT_COMPLETED // Variable per achievement
+  CHALLENGE_COMPLETED   // Variable per challenge
+  DAILY_CHALLENGE       // +50 for completion
+  MASTERY_UPGRADE       // +100 per tier upgrade
+  BONUS                 // Manual bonus (admin, events)
+}
+
+model XpTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount    Int                // XP amount (can be negative for corrections)
+  source    XpSource
+  sourceId  String?            // Related entity ID (badge, achievement, etc.)
+
+  // Context
+  description String?
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([source])
+  @@map("xp_transaction")
 }
