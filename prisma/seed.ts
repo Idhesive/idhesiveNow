@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -657,7 +657,7 @@ async function main() {
       type: "BANNER" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 1,
     },
     {
@@ -667,7 +667,7 @@ async function main() {
       type: "BANNER" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 2,
     },
     {
@@ -677,7 +677,7 @@ async function main() {
       type: "BANNER" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 3,
     },
 
@@ -823,7 +823,7 @@ async function main() {
       type: "ICON" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 100,
     },
     {
@@ -833,7 +833,7 @@ async function main() {
       type: "ICON" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 101,
     },
     {
@@ -843,7 +843,7 @@ async function main() {
       type: "ICON" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 102,
     },
 
@@ -907,7 +907,7 @@ async function main() {
       type: "TITLE" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 200,
     },
     {
@@ -1039,7 +1039,7 @@ async function main() {
       type: "PROFILE_FRAME" as const,
       rarity: "COMMON" as const,
       unlockMethod: "DEFAULT" as const,
-      unlockCriteria: null,
+      unlockCriteria: Prisma.JsonNull,
       sortOrder: 300,
     },
     {

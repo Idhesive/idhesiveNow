@@ -89,6 +89,7 @@ function AssessmentContent({
     }, 1000);
 
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, state.isCompleted]);
 
   // Notify parent of question changes
@@ -162,9 +163,6 @@ function AssessmentContent({
   };
 
   const currentQuestion = state.questions[state.currentQuestionIndex];
-  const isCurrentAnswered = currentQuestion
-    ? state.responses.some((r) => r.questionId === currentQuestion.id)
-    : false;
   const isCurrentFlagged = currentQuestion ? flaggedQuestions.has(currentQuestion.id) : false;
   const answeredCount = state.responses.length;
   const progressPercentage = state.questions.length > 0

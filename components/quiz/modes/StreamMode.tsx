@@ -72,6 +72,8 @@ function StreamContent({
   showStreak = true,
   showScore = true,
 }: StreamModeProps) {
+  // submitResponse kept for future implementation of direct response submission
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { state, loadQuestions, submitResponse } = useQuiz();
 
   // Session state
@@ -93,6 +95,8 @@ function StreamContent({
   // Question timing
   const questionStartTime = useRef<Date>(new Date());
   const [isLoadingNext, setIsLoadingNext] = useState(false);
+  // setQuestionQueue kept for future implementation of dynamic question loading
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [questionQueue, setQuestionQueue] = useState<QuestionData[]>(initialQuestions);
 
   // Session timer
@@ -110,6 +114,7 @@ function StreamContent({
     }, 1000);
 
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionState, timeRemaining]);
 
   // Question timer
@@ -132,6 +137,7 @@ function StreamContent({
     }, 1000);
 
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionState, questionTimeRemaining, questionTimeLimit]);
 
   const handleSessionEnd = useCallback(() => {

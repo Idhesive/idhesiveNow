@@ -9,6 +9,7 @@ import type { QTIResponseData } from '@/lib/quiz/types';
 
 interface QuestionRendererProps {
   onResponse?: (response: QTIResponseData | null) => void;
+  /** Whether to show immediate feedback after response (currently unused, for future implementation) */
   showFeedback?: boolean;
 }
 
@@ -62,6 +63,7 @@ class QuestionRendererErrorBoundary extends Component<
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function QuestionRenderer({ onResponse, showFeedback = false }: QuestionRendererProps) {
   const { state, submitResponse } = useQuiz();
   const containerRef = useRef<HTMLDivElement>(null);

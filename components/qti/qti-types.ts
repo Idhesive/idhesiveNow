@@ -8,7 +8,9 @@ import type { QtiAssessmentItem, QtiItem } from "@citolab/qti-components";
 
 // Extend React JSX to recognize QTI web components
 declare module "react" {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface IntrinsicElements extends CustomElements {}
   }
 }
