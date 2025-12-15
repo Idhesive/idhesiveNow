@@ -39,6 +39,11 @@ export interface QtiItemViewerProps {
    * Optional callback when item encounters an error
    */
   onError?: (error: Error) => void;
+
+  /**
+   * Optional callback when a response changes
+   */
+  onResponseChange?: (response: { identifier: string; value: string | string[] }) => void;
 }
 
 // QTI Item Event Types
