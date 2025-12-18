@@ -129,7 +129,11 @@ export function QuizSessionContent({ session }: QuizSessionContentProps) {
     // Store the response value - for single choice it's usually a string like "A", "B", etc.
     // For multiple choice it's an array
     console.log("Response changed:", response)
-    setSelectedResponse(response.value)
+    // Check if response has a valid value
+    const hasValue = Array.isArray(response.value) 
+      ? response.value.length > 0 
+      : response.value !== null && response.value !== undefined && response.value !== ""
+    setSelectedResponse(hasValue ? response.value : null)
   }
 
   const handleSubmit = async () => {
