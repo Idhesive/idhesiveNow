@@ -332,22 +332,27 @@ bun build         # Verify production build works
 
 ---
 
-## Open Questions for User
+## Design Decisions (Confirmed)
 
 1. **Leaderboard Display:**
-   - How many users should be shown? (Top 10, 25, 50?)
-   - Should we show global rank or just top players?
+   - Show top 10 users
+   - **IMPORTANT:** Emphasize effort over performance - design leaderboard to highlight participation and consistency
+   - Future: Should be social network-based (friends only)
+   - Focus on encouraging participation rather than pure competition
 
 2. **Challenge Refresh:**
-   - What timezone should determine "daily" reset? (UTC, user's local, system default?)
+   - Use user's local timezone for daily reset
+   - Challenges are date-based per user's local time
 
 3. **Retry Policy:**
-   - Can users retry daily challenges or one attempt only?
+   - Retries are allowed - users can attempt the same daily challenge multiple times
+   - Track best attempt for leaderboard ranking
 
 4. **Historical Challenges:**
-   - Should users be able to view/retry past challenges?
-   - Is this needed for MVP or future enhancement?
+   - All challenges stored in database and accessible
+   - Deeplinkable URLs (e.g., `/dashboard/practice/daily/2025-12-18`)
+   - Users can replay any past challenge
 
 5. **Empty State:**
-   - What should happen if no challenge exists for today?
-   - Should we show yesterday's challenge as fallback?
+   - Show empty state when no challenge exists for today
+   - Include link to browse previous challenges

@@ -791,3 +791,380 @@ function checkAnswer(response: unknown, correctAnswers: unknown): boolean {
 
   return false
 }
+
+/**
+ * Get daily challenge data for a specific date
+ */
+export async function getDailyChallengeData(date?: Date) {
+  const user = await getAuthenticatedUser()
+
+  // Use provided date or today (user's local date will be passed from client)
+  const challengeDate = date || new Date()
+  challengeDate.setHours(0, 0, 0, 0)
+
+  // Get the daily challenge
+  const challenge = await prisma.dailyChallenge.findFirst({
+    where: { challengeDate },
+  })
+
+  if (!challenge) {
+    return {
+      challenge: null,
+      userAttempts: [],
+      bestAttempt: null,
+      leaderboard: [],
+      userRank: null,
+    }
+  }
+
+  // Get the template separately
+  const template = await prisma.assessmentTemplate.findUnique({
+    where: { id: challenge.templateId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      assessmentType: true,
+    },
+  })
+
+  // Get all user's attempts for this challenge (supports retries)
+  const userAttempts = await prisma.dailyChallengeAttempt.findMany({
+    where: {
+      userId: user.id,
+      challengeDate,
+      templateId: challenge.templateId,
+    },
+    orderBy: { completedAt: "desc" },
+  })
+
+  // Get user's best attempt (highest score, then fastest time)
+  const bestAttempt = userAttempts.length > 0
+    ? userAttempts.reduce((best, current) => {
+        if (current.score > best.score) return current
+        if (current.score === best.score && current.timeMs < best.timeMs) return current
+        return best
+      })
+    : null
+
+  // Get leaderboard - top 10 users by best attempt
+  // Emphasize participation: show attempts count, consistency indicators
+  const leaderboard = await prisma.dailyChallengeAttempt.findMany({
+    where: {
+      challengeDate,
+      templateId: challenge.templateId,
+    },
+    orderBy: [
+      { score: "desc" },
+      { timeMs: "asc" },
+    ],
+  })
+
+  // Get user details for leaderboard
+  const userIds = [...new Set(leaderboard.map(a => a.userId))]
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+    },
+  })
+  const userMap = new Map(users.map(u => [u.id, u]))
+
+  // Group by user and keep only best attempt per user
+  const userBestAttempts = new Map<string, typeof leaderboard[0]>()
+  for (const attempt of leaderboard) {
+    const existing = userBestAttempts.get(attempt.userId)
+    if (!existing ||
+        attempt.score > existing.score ||
+        (attempt.score === existing.score && attempt.timeMs < existing.timeMs)) {
+      userBestAttempts.set(attempt.userId, attempt)
+    }
+  }
+
+  const topAttempts = Array.from(userBestAttempts.values())
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return a.timeMs - b.timeMs
+    })
+    .slice(0, 10)
+
+  // Calculate user's rank (only among users with attempts)
+  let userRank: number | null = null
+  if (bestAttempt) {
+    const allBestAttempts = Array.from(userBestAttempts.values())
+    userRank = allBestAttempts.findIndex(a => a.userId === user.id) + 1
+    if (userRank === 0) userRank = null
+  }
+
+  return {
+    challenge: {
+      id: challenge.id,
+      challengeDate: challenge.challengeDate,
+      templateId: challenge.templateId,
+      questionCount: challenge.questionIds.length,
+      totalParticipants: userBestAttempts.size,
+      averageScore: challenge.averageScore,
+      template,
+    },
+    userAttempts: userAttempts.map(a => ({
+      id: a.id,
+      score: a.score,
+      timeMs: a.timeMs,
+      questionsCorrect: a.questionsCorrect,
+      completedAt: a.completedAt,
+      sessionId: a.sessionId,
+    })),
+    bestAttempt: bestAttempt ? {
+      id: bestAttempt.id,
+      score: bestAttempt.score,
+      timeMs: bestAttempt.timeMs,
+      questionsCorrect: bestAttempt.questionsCorrect,
+      completedAt: bestAttempt.completedAt,
+    } : null,
+    leaderboard: topAttempts.map((attempt, index) => {
+      const userData = userMap.get(attempt.userId)
+      return {
+        rank: index + 1,
+        userId: attempt.userId,
+        userName: userData?.name || "Anonymous",
+        userImage: userData?.image || null,
+        score: attempt.score,
+        timeMs: attempt.timeMs,
+        questionsCorrect: attempt.questionsCorrect,
+        completedAt: attempt.completedAt,
+      }
+    }),
+    userRank,
+  }
+}
+
+/**
+ * Start a daily challenge session
+ */
+export async function startDailyChallenge(params: {
+  challengeId: string
+  challengeDate: Date
+}) {
+  const user = await getAuthenticatedUser()
+
+  // Get the daily challenge
+  const challenge = await prisma.dailyChallenge.findUnique({
+    where: { id: params.challengeId },
+  })
+
+  if (!challenge) {
+    throw new Error("Daily challenge not found")
+  }
+
+  // Get the template
+  const template = await prisma.assessmentTemplate.findUnique({
+    where: { id: challenge.templateId },
+  })
+
+  if (!template) {
+    throw new Error("Challenge template not found")
+  }
+
+  // Create an assessment session with the fixed question set
+  const session = await prisma.assessmentSession.create({
+    data: {
+      userId: user.id,
+      templateId: challenge.templateId,
+      assessmentType: template.assessmentType,
+      selectionStrategy: template.selectionStrategy,
+      terminationCondition: template.terminationCondition,
+      config: {
+        ...template,
+        isDailyChallenge: true,
+        challengeId: challenge.id,
+        challengeDate: params.challengeDate,
+      } as object,
+      topicIds: [],
+      status: "IN_PROGRESS",
+      currentQuestionIndex: 0,
+      livesRemaining: template.startingLives,
+      questionOrder: {
+        create: challenge.questionIds.map((qId, index) => ({
+          questionId: qId,
+          position: index,
+        })),
+      },
+    },
+  })
+
+  return { sessionId: session.id }
+}
+
+/**
+ * Complete a daily challenge and record the attempt
+ */
+export async function completeDailyChallenge(params: {
+  sessionId: string
+  challengeId: string
+  challengeDate: Date
+}) {
+  const user = await getAuthenticatedUser()
+
+  // Get the completed session
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: params.sessionId },
+  })
+
+  if (!session || session.userId !== user.id) {
+    throw new Error("Session not found")
+  }
+
+  if (session.status !== "COMPLETED") {
+    throw new Error("Session is not completed")
+  }
+
+  // Get the challenge
+  const challenge = await prisma.dailyChallenge.findUnique({
+    where: { id: params.challengeId },
+  })
+
+  if (!challenge) {
+    throw new Error("Challenge not found")
+  }
+
+  // Create the attempt record
+  const attempt = await prisma.dailyChallengeAttempt.create({
+    data: {
+      userId: user.id,
+      challengeDate: params.challengeDate,
+      templateId: challenge.templateId,
+      sessionId: session.id,
+      score: session.totalScore,
+      timeMs: session.totalTimeMs || 0,
+      questionsCorrect: session.questionsCorrect,
+    },
+  })
+
+  // Update challenge aggregate stats
+  const allAttempts = await prisma.dailyChallengeAttempt.findMany({
+    where: {
+      challengeDate: params.challengeDate,
+      templateId: challenge.templateId,
+    },
+  })
+
+  const totalScore = allAttempts.reduce((sum, a) => sum + a.score, 0)
+  const averageScore = allAttempts.length > 0 ? totalScore / allAttempts.length : 0
+
+  // Count unique users who completed
+  const uniqueUsers = new Set(allAttempts.map(a => a.userId))
+
+  await prisma.dailyChallenge.update({
+    where: { id: params.challengeId },
+    data: {
+      totalAttempts: allAttempts.length,
+      totalCompletions: uniqueUsers.size,
+      averageScore,
+    },
+  })
+
+  // Calculate user's rank (best attempt per user)
+  const userBestAttempts = new Map<string, typeof allAttempts[0]>()
+  for (const att of allAttempts) {
+    const existing = userBestAttempts.get(att.userId)
+    if (!existing ||
+        att.score > existing.score ||
+        (att.score === existing.score && att.timeMs < existing.timeMs)) {
+      userBestAttempts.set(att.userId, att)
+    }
+  }
+
+  const sortedBestAttempts = Array.from(userBestAttempts.values())
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return a.timeMs - b.timeMs
+    })
+
+  const userBest = userBestAttempts.get(user.id)
+  const rank = userBest ? sortedBestAttempts.findIndex(a => a.userId === user.id) + 1 : null
+
+  // Update the rank on the attempt
+  if (rank) {
+    await prisma.dailyChallengeAttempt.update({
+      where: { id: attempt.id },
+      data: { rank },
+    })
+  }
+
+  return {
+    attemptId: attempt.id,
+    rank,
+    score: attempt.score,
+    isNewBest: !userBest || attempt.score > userBest.score ||
+      (attempt.score === userBest.score && attempt.timeMs < userBest.timeMs),
+  }
+}
+
+/**
+ * Get list of available past challenges
+ */
+export async function getPastChallenges(params?: {
+  page?: number
+  limit?: number
+}) {
+  const user = await getAuthenticatedUser()
+  const page = params?.page || 0
+  const limit = params?.limit || 20
+
+  const [challenges, total] = await Promise.all([
+    prisma.dailyChallenge.findMany({
+      orderBy: { challengeDate: "desc" },
+      skip: page * limit,
+      take: limit,
+    }),
+    prisma.dailyChallenge.count(),
+  ])
+
+  // Get templates for these challenges
+  const templateIds = [...new Set(challenges.map(c => c.templateId))]
+  const templates = await prisma.assessmentTemplate.findMany({
+    where: { id: { in: templateIds } },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+    },
+  })
+  const templateMap = new Map(templates.map(t => [t.id, t]))
+
+  // Get user's attempts for these challenges
+  const challengeDates = challenges.map(c => c.challengeDate)
+  const userAttempts = await prisma.dailyChallengeAttempt.findMany({
+    where: {
+      userId: user.id,
+      challengeDate: { in: challengeDates },
+    },
+  })
+
+  const attemptsByDate = new Map(
+    userAttempts.map(a => [a.challengeDate.toISOString(), a])
+  )
+
+  return {
+    challenges: challenges.map(c => {
+      const template = templateMap.get(c.templateId)
+      return {
+        id: c.id,
+        challengeDate: c.challengeDate,
+        questionCount: c.questionIds.length,
+        totalParticipants: c.totalCompletions,
+        averageScore: c.averageScore,
+        templateName: template?.name || null,
+        templateDescription: template?.description || null,
+        userCompleted: attemptsByDate.has(c.challengeDate.toISOString()),
+        userScore: attemptsByDate.get(c.challengeDate.toISOString())?.score,
+      }
+    }),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  }
+}

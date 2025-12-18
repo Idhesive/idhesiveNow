@@ -26,7 +26,7 @@ import {
   SkipForward,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { submitQuestionResponse, endPracticeSession } from "@/actions/practice-actions"
+import { submitQuestionResponse, endPracticeSession, completeDailyChallenge } from "@/actions/practice-actions"
 import { toast } from "sonner"
 import QtiItemViewer from "@/components/qti/qti-item-viewer"
 import type { AssessmentType, SessionStatus, QuestionType, DifficultyLevel } from "@prisma/client"
@@ -199,6 +199,28 @@ export function QuizSessionContent({ session }: QuizSessionContentProps) {
     startTransition(async () => {
       try {
         await endPracticeSession(session.id, reason)
+
+        // Check if this is a daily challenge and handle completion
+        const config = session.config as Record<string, unknown>
+        if (config?.isDailyChallenge && config?.challengeId && config?.challengeDate) {
+          try {
+            const result = await completeDailyChallenge({
+              sessionId: session.id,
+              challengeId: config.challengeId as string,
+              challengeDate: new Date(config.challengeDate as string),
+            })
+
+            if (result.isNewBest) {
+              toast.success("New personal best! 🎉", {
+                description: `Rank: #${result.rank}`,
+              })
+            }
+          } catch (error) {
+            console.error("Failed to record daily challenge completion:", error)
+            // Don't block navigation if this fails
+          }
+        }
+
         router.push(`/dashboard/practice/quiz/results/${session.id}`)
       } catch (error) {
         console.error("Failed to end session:", error)
