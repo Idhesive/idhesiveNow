@@ -92,9 +92,18 @@ export default function QtiItemViewer({
   // Handle response changes from QTI interactions
   const handleInteractionChange = useCallback(
     (event: Event) => {
-      const customEvent = event as CustomEvent<{ identifier: string; value: string | string[] }>;
+      // The QTI library dispatches events with: { item, responseIdentifier, response }
+      // We transform it to our expected interface: { identifier, value }
+      const customEvent = event as CustomEvent<{
+        item: string;
+        responseIdentifier: string;
+        response: string | string[];
+      }>;
       if (customEvent.detail && onResponseChange) {
-        onResponseChange(customEvent.detail);
+        onResponseChange({
+          identifier: customEvent.detail.responseIdentifier,
+          value: customEvent.detail.response,
+        });
       }
     },
     [onResponseChange]
