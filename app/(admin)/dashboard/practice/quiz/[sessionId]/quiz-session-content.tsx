@@ -128,6 +128,7 @@ export function QuizSessionContent({ session }: QuizSessionContentProps) {
   const handleResponseChange = (response: { identifier: string; value: string | string[] }) => {
     // Store the response value - for single choice it's usually a string like "A", "B", etc.
     // For multiple choice it's an array
+    console.log("Response changed:", response)
     setSelectedResponse(response.value)
   }
 
