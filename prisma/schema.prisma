@@ -186,6 +186,7 @@ model Topic {
   learnerRatings    LearnerTopicRating[]
   learningPathItems LearningPathItem[]
   standardAlignments StandardAlignment[] // External standards mappings
+  knowledgeStates   LearnerKnowledgeState[]
 
   @@unique([gradeLevelId, code])
   @@index([parentId])
@@ -675,6 +676,7 @@ model LearnerKnowledgeState {
   userId  String
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id])
 
   // BKT parameters
   pKnown          Float @default(0.5) // P(L) - probability of knowing

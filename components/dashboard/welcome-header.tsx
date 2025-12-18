@@ -26,6 +26,8 @@ export function WelcomeHeader({
   const greeting = getGreeting()
   const firstName = userName.split(" ")[0]
 
+
+  
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">

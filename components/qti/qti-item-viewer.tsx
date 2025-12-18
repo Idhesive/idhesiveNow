@@ -26,9 +26,11 @@ export default function QtiItemViewer({
   className = "",
   onItemLoaded,
   onError,
+  onResponseChange,
 }: QtiItemViewerProps) {
   const { isReady: isQtiReady } = useQtiReady();
   const qtiItemRef = useRef<QtiItem>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [transformedXML, setTransformedXML] = useState<Document | DocumentFragment | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,17 +89,46 @@ export default function QtiItemViewer({
     []
   );
 
-  // Set up event listener for item connection
+  // Handle response changes from QTI interactions
+  const handleInteractionChange = useCallback(
+    (event: Event) => {
+      // The QTI library dispatches events with: { item, responseIdentifier, response }
+      // We transform it to our expected interface: { identifier, value }
+      const customEvent = event as CustomEvent<{
+        item: string;
+        responseIdentifier: string;
+        response: string | string[];
+      }>;
+      if (customEvent.detail && onResponseChange) {
+        onResponseChange({
+          identifier: customEvent.detail.responseIdentifier,
+          value: customEvent.detail.response,
+        });
+      }
+    },
+    [onResponseChange]
+  );
+
+  // Set up event listeners for item connection and response changes
   useEffect(() => {
     const qtiItem = qtiItemRef.current;
+    const container = containerRef.current;
     if (!qtiItem) return;
 
     qtiItem.addEventListener("qti-assessment-item-connected", handleItemConnected);
 
+    // Listen for interaction changes on the container (events bubble up)
+    if (container) {
+      container.addEventListener("qti-interaction-changed", handleInteractionChange);
+    }
+
     return () => {
       qtiItem.removeEventListener("qti-assessment-item-connected", handleItemConnected);
+      if (container) {
+        container.removeEventListener("qti-interaction-changed", handleInteractionChange);
+      }
     };
-  }, [handleItemConnected]);
+  }, [handleItemConnected, handleInteractionChange, transformedXML]);
 
   // Render loading state
   if (isLoading || !isQtiReady) {
@@ -152,7 +183,7 @@ export default function QtiItemViewer({
 
   // Render QTI item
   return (
-    <div className={`qti-item-container ${className}`}>
+    <div ref={containerRef} className={`qti-item-container ${className}`}>
       <qti-item ref={qtiItemRef}>
         <item-container itemDoc={transformedXML}></item-container>
       </qti-item>
