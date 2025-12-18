@@ -119,7 +119,7 @@ export default function QtiItemViewer({
         container.removeEventListener("qti-interaction-changed", handleInteractionChange);
       }
     };
-  }, [handleItemConnected, handleInteractionChange]);
+  }, [handleItemConnected, handleInteractionChange, transformedXML]);
 
   // Render loading state
   if (isLoading || !isQtiReady) {
