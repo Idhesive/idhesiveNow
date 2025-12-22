@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode, useEffect, useRef } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { useQuiz } from './QuizContext';
 import QtiItemViewer from '@/components/qti/qti-item-viewer';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -66,39 +66,8 @@ class QuestionRendererErrorBoundary extends Component<
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function QuestionRenderer({ onResponse, showFeedback = false }: QuestionRendererProps) {
   const { state, submitResponse } = useQuiz();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const currentQuestion = state.questions[state.currentQuestionIndex];
-
-  // Listen for QTI response events
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleQtiResponse = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const detail = customEvent.detail;
-
-      if (detail && currentQuestion) {
-        const response: QTIResponseData = {
-          identifier: detail.responseIdentifier || detail.identifier || 'RESPONSE',
-          value: detail.value ?? detail.response ?? null,
-        };
-
-        submitResponse(response);
-        onResponse?.(response);
-      }
-    };
-
-    // Listen for various QTI interaction events
-    container.addEventListener('qti-interaction-response', handleQtiResponse);
-    container.addEventListener('qti-outcome-changed', handleQtiResponse);
-
-    return () => {
-      container.removeEventListener('qti-interaction-response', handleQtiResponse);
-      container.removeEventListener('qti-outcome-changed', handleQtiResponse);
-    };
-  }, [currentQuestion, submitResponse, onResponse]);
 
   if (!currentQuestion) {
     return (
@@ -114,12 +83,22 @@ export function QuestionRenderer({ onResponse, showFeedback = false }: QuestionR
 
   return (
     <QuestionRendererErrorBoundary onRetry={handleRetry}>
-      <div className="question-renderer" ref={containerRef}>
+      <div className="question-renderer">
         <QtiItemViewer
           itemXML={currentQuestion.xmlContent}
           className="w-full"
           onItemLoaded={() => console.log('Question loaded:', currentQuestion.id)}
           onError={(error) => console.error('Question error:', error)}
+          onResponseChange={(data) => {
+            if (currentQuestion) {
+              const response: QTIResponseData = {
+                identifier: data.identifier || 'RESPONSE',
+                value: data.value,
+              };
+              submitResponse(response);
+              onResponse?.(response);
+            }
+          }}
         />
       </div>
     </QuestionRendererErrorBoundary>

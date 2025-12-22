@@ -1,0 +1,26 @@
+{
+    "name": "@idhesive/question-agent",
+    "version": "1.0.0",
+    "description": "LangChain agent for generating QTI questions with database integration",
+    "type": "module",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "npx tsx src/index.ts",
+        "generate": "npx tsx src/index.ts",
+        "postinstall": "npx prisma generate --schema=../../prisma/schema.prisma"
+    },
+    "dependencies": {
+        "@langchain/core": "^0.3.0",
+        "@langchain/openai": "^0.3.0",
+        "dotenv": "^16.4.0",
+        "fast-xml-parser": "^4.3.0",
+        "langchain": "^0.3.0",
+        "zod": "^3.24.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    }
+}

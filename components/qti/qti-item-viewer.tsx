@@ -90,20 +90,41 @@ export default function QtiItemViewer({
   );
 
   // Handle response changes from QTI interactions
-  const handleInteractionChange = useCallback(
+  // The correct event is 'qti-item-context-updated' which contains itemContext.variables
+  const handleContextUpdated = useCallback(
     (event: Event) => {
-      // The QTI library dispatches events with: { item, responseIdentifier, response }
-      // We transform it to our expected interface: { identifier, value }
-      const customEvent = event as CustomEvent<{
-        item: string;
-        responseIdentifier: string;
-        response: string | string[];
-      }>;
-      if (customEvent.detail && onResponseChange) {
-        onResponseChange({
-          identifier: customEvent.detail.responseIdentifier,
-          value: customEvent.detail.response,
-        });
+      const customEvent = event as CustomEvent;
+      const detail = customEvent.detail;
+
+      console.log("[QtiItemViewer] qti-item-context-updated received:", detail);
+
+      if (detail && onResponseChange) {
+        // Extract response from itemContext.variables
+        const itemContext = detail.itemContext || detail;
+        const variables = itemContext?.variables || [];
+
+        // Find the first response variable (usually RESPONSE)
+        const responseVar = variables.find((v: { type?: string; identifier?: string }) =>
+          v.type === 'RESPONSE' || v.identifier === 'RESPONSE' || v.identifier?.startsWith('RESPONSE')
+        );
+
+        if (responseVar && responseVar.value != null) {
+          console.log("[QtiItemViewer] Found response:", responseVar);
+          onResponseChange({
+            identifier: responseVar.identifier || 'RESPONSE',
+            value: responseVar.value
+          });
+        } else {
+          // Fallback: try to find any variable with a value
+          const anyVarWithValue = variables.find((v: { value?: unknown }) => v.value != null);
+          if (anyVarWithValue) {
+            console.log("[QtiItemViewer] Found variable with value:", anyVarWithValue);
+            onResponseChange({
+              identifier: anyVarWithValue.identifier || 'RESPONSE',
+              value: anyVarWithValue.value
+            });
+          }
+        }
       }
     },
     [onResponseChange]
@@ -115,20 +136,27 @@ export default function QtiItemViewer({
     const container = containerRef.current;
     if (!qtiItem) return;
 
+    console.log("[QtiItemViewer] Setting up event listeners");
+
     qtiItem.addEventListener("qti-assessment-item-connected", handleItemConnected);
 
-    // Listen for interaction changes on the container (events bubble up)
+    // The correct event to listen for is 'qti-item-context-updated'
+    // It fires on interactions and contains itemContext.variables with responses
     if (container) {
-      container.addEventListener("qti-interaction-changed", handleInteractionChange);
+      container.addEventListener("qti-item-context-updated", handleContextUpdated);
     }
+    qtiItem.addEventListener("qti-item-context-updated", handleContextUpdated);
+    document.addEventListener("qti-item-context-updated", handleContextUpdated);
 
     return () => {
       qtiItem.removeEventListener("qti-assessment-item-connected", handleItemConnected);
       if (container) {
-        container.removeEventListener("qti-interaction-changed", handleInteractionChange);
+        container.removeEventListener("qti-item-context-updated", handleContextUpdated);
       }
+      qtiItem.removeEventListener("qti-item-context-updated", handleContextUpdated);
+      document.removeEventListener("qti-item-context-updated", handleContextUpdated);
     };
-  }, [handleItemConnected, handleInteractionChange, transformedXML]);
+  }, [handleItemConnected, handleContextUpdated]);
 
   // Render loading state
   if (isLoading || !isQtiReady) {
