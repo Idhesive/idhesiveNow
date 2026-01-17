@@ -2,6 +2,9 @@
 
 This guide explains how to add curriculum content (countries, curricula, subjects, topics) and questions to the IdhesiveNow database. Use this as context for AI agents or manual content population.
 
+> [!TIP]
+> **Specific Workflow Available**: For adding **CAPS Grade 5 Mathematics**, please see the detailed step-by-step runbook: [Workflow: Adding CAPS Grade 5 Math](./WORKFLOW_ADD_CAPS_GRADE_5.md).
+
 ## Database Schema Overview
 
 The content hierarchy follows this structure:

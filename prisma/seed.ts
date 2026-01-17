@@ -1,4 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { auth } from "../lib/auth";
+import { seedGrade5Math } from "./seeds/caps-grade-5-math";
 
 const prisma = new PrismaClient();
 
@@ -1678,14 +1680,14 @@ async function main() {
       tags: string[];
     }[];
   }[] = [
-    // Numbers: Counting
-    {
-      topicCode: "NUM-001-01",
-      questions: [
-        {
-          title: "Count by 25s",
-          questionText: "What number comes next in this sequence: 25, 50, 75, ___?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+      // Numbers: Counting
+      {
+        topicCode: "NUM-001-01",
+        questions: [
+          {
+            title: "Count by 25s",
+            questionText: "What number comes next in this sequence: 25, 50, 75, ___?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-01-Q1" title="Count by 25s" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -1700,16 +1702,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "A",
-          estimatedTime: 30,
-          tags: ["counting", "patterns", "multiples"],
-        },
-        {
-          title: "Count backwards by 100s",
-          questionText: "Count backwards: 1000, 900, 800, ___",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "A",
+            estimatedTime: 30,
+            tags: ["counting", "patterns", "multiples"],
+          },
+          {
+            title: "Count backwards by 100s",
+            questionText: "Count backwards: 1000, 900, 800, ___",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-01-Q2" title="Count backwards by 100s" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
@@ -1724,22 +1726,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "B",
-          estimatedTime: 30,
-          tags: ["counting", "backwards", "hundreds"],
-        },
-      ],
-    },
-    // Numbers: Addition and Subtraction
-    {
-      topicCode: "NUM-001-05",
-      questions: [
-        {
-          title: "Three-digit addition",
-          questionText: "What is 234 + 567?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "B",
+            estimatedTime: 30,
+            tags: ["counting", "backwards", "hundreds"],
+          },
+        ],
+      },
+      // Numbers: Addition and Subtraction
+      {
+        topicCode: "NUM-001-05",
+        questions: [
+          {
+            title: "Three-digit addition",
+            questionText: "What is 234 + 567?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-05-Q1" title="Three-digit addition" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>C</qti-value></qti-correct-response>
@@ -1754,16 +1756,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "C",
-          estimatedTime: 45,
-          tags: ["addition", "three-digit", "no-regrouping"],
-        },
-        {
-          title: "Three-digit subtraction",
-          questionText: "What is 845 - 362?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "C",
+            estimatedTime: 45,
+            tags: ["addition", "three-digit", "no-regrouping"],
+          },
+          {
+            title: "Three-digit subtraction",
+            questionText: "What is 845 - 362?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-05-Q2" title="Three-digit subtraction" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -1778,16 +1780,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "A",
-          estimatedTime: 45,
-          tags: ["subtraction", "three-digit", "regrouping"],
-        },
-        {
-          title: "Word problem - addition",
-          questionText: "A farmer has 256 apples and picks 189 more. How many apples does the farmer have now?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "A",
+            estimatedTime: 45,
+            tags: ["subtraction", "three-digit", "regrouping"],
+          },
+          {
+            title: "Word problem - addition",
+            questionText: "A farmer has 256 apples and picks 189 more. How many apples does the farmer have now?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-05-Q3" title="Word problem - addition" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
@@ -1802,22 +1804,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "ADVANCED",
-          correctAnswers: "B",
-          estimatedTime: 60,
-          tags: ["addition", "word-problem", "real-world"],
-        },
-      ],
-    },
-    // Numbers: Multiplication
-    {
-      topicCode: "NUM-001-06",
-      questions: [
-        {
-          title: "Multiplication table - 6s",
-          questionText: "What is 6 × 7?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "ADVANCED",
+            correctAnswers: "B",
+            estimatedTime: 60,
+            tags: ["addition", "word-problem", "real-world"],
+          },
+        ],
+      },
+      // Numbers: Multiplication
+      {
+        topicCode: "NUM-001-06",
+        questions: [
+          {
+            title: "Multiplication table - 6s",
+            questionText: "What is 6 × 7?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-06-Q1" title="Multiplication table - 6s" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>C</qti-value></qti-correct-response>
@@ -1832,16 +1834,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "C",
-          estimatedTime: 20,
-          tags: ["multiplication", "times-tables", "6s"],
-        },
-        {
-          title: "Multiplication by 10",
-          questionText: "What is 47 × 10?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "C",
+            estimatedTime: 20,
+            tags: ["multiplication", "times-tables", "6s"],
+          },
+          {
+            title: "Multiplication by 10",
+            questionText: "What is 47 × 10?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-06-Q2" title="Multiplication by 10" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -1856,22 +1858,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "A",
-          estimatedTime: 20,
-          tags: ["multiplication", "tens", "place-value"],
-        },
-      ],
-    },
-    // Numbers: Division
-    {
-      topicCode: "NUM-001-07",
-      questions: [
-        {
-          title: "Division facts",
-          questionText: "What is 56 ÷ 8?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "A",
+            estimatedTime: 20,
+            tags: ["multiplication", "tens", "place-value"],
+          },
+        ],
+      },
+      // Numbers: Division
+      {
+        topicCode: "NUM-001-07",
+        questions: [
+          {
+            title: "Division facts",
+            questionText: "What is 56 ÷ 8?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-07-Q1" title="Division facts" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
@@ -1886,16 +1888,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "B",
-          estimatedTime: 20,
-          tags: ["division", "facts", "8s"],
-        },
-        {
-          title: "Division with remainder",
-          questionText: "What is 43 ÷ 5? Give the quotient and remainder.",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "B",
+            estimatedTime: 20,
+            tags: ["division", "facts", "8s"],
+          },
+          {
+            title: "Division with remainder",
+            questionText: "What is 43 ÷ 5? Give the quotient and remainder.",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-07-Q2" title="Division with remainder" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>C</qti-value></qti-correct-response>
@@ -1910,22 +1912,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "C",
-          estimatedTime: 45,
-          tags: ["division", "remainder", "5s"],
-        },
-      ],
-    },
-    // Numbers: Fractions
-    {
-      topicCode: "NUM-001-08",
-      questions: [
-        {
-          title: "Identify a fraction",
-          questionText: "What fraction of the circle is shaded? If 3 out of 8 equal parts are shaded.",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "C",
+            estimatedTime: 45,
+            tags: ["division", "remainder", "5s"],
+          },
+        ],
+      },
+      // Numbers: Fractions
+      {
+        topicCode: "NUM-001-08",
+        questions: [
+          {
+            title: "Identify a fraction",
+            questionText: "What fraction of the circle is shaded? If 3 out of 8 equal parts are shaded.",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-08-Q1" title="Identify a fraction" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -1940,16 +1942,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "FOUNDATIONAL",
-          correctAnswers: "A",
-          estimatedTime: 30,
-          tags: ["fractions", "identify", "parts-of-whole"],
-        },
-        {
-          title: "Equivalent fractions",
-          questionText: "Which fraction is equivalent to 1/2?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "FOUNDATIONAL",
+            correctAnswers: "A",
+            estimatedTime: 30,
+            tags: ["fractions", "identify", "parts-of-whole"],
+          },
+          {
+            title: "Equivalent fractions",
+            questionText: "Which fraction is equivalent to 1/2?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="NUM-001-08-Q2" title="Equivalent fractions" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>D</qti-value></qti-correct-response>
@@ -1964,22 +1966,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "D",
-          estimatedTime: 30,
-          tags: ["fractions", "equivalent", "comparison"],
-        },
-      ],
-    },
-    // Patterns: Numeric Patterns
-    {
-      topicCode: "PAT-001-01",
-      questions: [
-        {
-          title: "Complete the pattern",
-          questionText: "What number comes next? 3, 6, 9, 12, ___",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "D",
+            estimatedTime: 30,
+            tags: ["fractions", "equivalent", "comparison"],
+          },
+        ],
+      },
+      // Patterns: Numeric Patterns
+      {
+        topicCode: "PAT-001-01",
+        questions: [
+          {
+            title: "Complete the pattern",
+            questionText: "What number comes next? 3, 6, 9, 12, ___",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="PAT-001-01-Q1" title="Complete the pattern" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
@@ -1994,22 +1996,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "B",
-          estimatedTime: 20,
-          tags: ["patterns", "multiples", "3s"],
-        },
-      ],
-    },
-    // Space and Shape: 2-D Shapes
-    {
-      topicCode: "SPA-001-01",
-      questions: [
-        {
-          title: "Identify quadrilaterals",
-          questionText: "Which of these is a quadrilateral?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "B",
+            estimatedTime: 20,
+            tags: ["patterns", "multiples", "3s"],
+          },
+        ],
+      },
+      // Space and Shape: 2-D Shapes
+      {
+        topicCode: "GEO-001-01",
+        questions: [
+          {
+            title: "Identify quadrilaterals",
+            questionText: "Which of these is a quadrilateral?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="SPA-001-01-Q1" title="Identify quadrilaterals" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>C</qti-value></qti-correct-response>
@@ -2024,22 +2026,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "C",
-          estimatedTime: 20,
-          tags: ["shapes", "2d", "quadrilateral"],
-        },
-      ],
-    },
-    // Measurement: Time
-    {
-      topicCode: "MEA-001-04",
-      questions: [
-        {
-          title: "Read digital time",
-          questionText: "If the time is 2:45 PM, what time will it be in 30 minutes?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "C",
+            estimatedTime: 20,
+            tags: ["shapes", "2d", "quadrilateral"],
+          },
+        ],
+      },
+      // Measurement: Time
+      {
+        topicCode: "MEA-001-04",
+        questions: [
+          {
+            title: "Read digital time",
+            questionText: "If the time is 2:45 PM, what time will it be in 30 minutes?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="MEA-001-04-Q1" title="Read digital time" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -2054,22 +2056,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "A",
-          estimatedTime: 30,
-          tags: ["time", "elapsed-time", "digital"],
-        },
-      ],
-    },
-    // Measurement: Perimeter and Area
-    {
-      topicCode: "MEA-001-05",
-      questions: [
-        {
-          title: "Calculate perimeter",
-          questionText: "What is the perimeter of a rectangle with length 8 cm and width 5 cm?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "A",
+            estimatedTime: 30,
+            tags: ["time", "elapsed-time", "digital"],
+          },
+        ],
+      },
+      // Measurement: Perimeter and Area
+      {
+        topicCode: "MEA-001-05",
+        questions: [
+          {
+            title: "Calculate perimeter",
+            questionText: "What is the perimeter of a rectangle with length 8 cm and width 5 cm?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="MEA-001-05-Q1" title="Calculate perimeter" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
@@ -2084,16 +2086,16 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "B",
-          estimatedTime: 45,
-          tags: ["perimeter", "rectangle", "measurement"],
-        },
-        {
-          title: "Calculate area",
-          questionText: "What is the area of a rectangle with length 6 cm and width 4 cm?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "B",
+            estimatedTime: 45,
+            tags: ["perimeter", "rectangle", "measurement"],
+          },
+          {
+            title: "Calculate area",
+            questionText: "What is the area of a rectangle with length 6 cm and width 4 cm?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="MEA-001-05-Q2" title="Calculate area" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>C</qti-value></qti-correct-response>
@@ -2108,22 +2110,22 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "PROFICIENT",
-          correctAnswers: "C",
-          estimatedTime: 45,
-          tags: ["area", "rectangle", "measurement"],
-        },
-      ],
-    },
-    // Data Handling: Interpreting Data
-    {
-      topicCode: "DAT-001-03",
-      questions: [
-        {
-          title: "Read a bar graph",
-          questionText: "In a bar graph showing favorite fruits, if apples has a bar reaching 15 and oranges has a bar reaching 10, how many more students prefer apples?",
-          qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
+            type: "CHOICE",
+            difficultyLevel: "PROFICIENT",
+            correctAnswers: "C",
+            estimatedTime: 45,
+            tags: ["area", "rectangle", "measurement"],
+          },
+        ],
+      },
+      // Data Handling: Interpreting Data
+      {
+        topicCode: "DAT-001-03",
+        questions: [
+          {
+            title: "Read a bar graph",
+            questionText: "In a bar graph showing favorite fruits, if apples has a bar reaching 15 and oranges has a bar reaching 10, how many more students prefer apples?",
+            qtiXml: `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="DAT-001-03-Q1" title="Read a bar graph" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
     <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
@@ -2138,15 +2140,15 @@ async function main() {
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
-          type: "CHOICE",
-          difficultyLevel: "DEVELOPING",
-          correctAnswers: "A",
-          estimatedTime: 30,
-          tags: ["data", "bar-graph", "interpretation"],
-        },
-      ],
-    },
-  ];
+            type: "CHOICE",
+            difficultyLevel: "DEVELOPING",
+            correctAnswers: "A",
+            estimatedTime: 30,
+            tags: ["data", "bar-graph", "interpretation"],
+          },
+        ],
+      },
+    ];
 
   // Create questions and link to topics
   let questionCount = 0;
@@ -2215,6 +2217,12 @@ async function main() {
     }
   }
   console.log(`   ✅ Created ${questionCount} practice questions`);
+
+  // ============================================================================
+  // GRADE 5 CONTENT
+  // ============================================================================
+  await seedGrade5Math();
+  console.log("");
 
   // ============================================================================
   // ASSESSMENT TEMPLATES
@@ -2338,6 +2346,73 @@ async function main() {
     });
   }
   console.log(`   ✅ Created learning path with ${allTopics.length} items`);
+  console.log("");
+
+  // ============================================================================
+  // USERS
+  // ============================================================================
+  console.log("👤 Seeding users...");
+
+  try {
+    // Create Admin
+    const adminEmail = "admin@idhesive.com";
+
+    // Clean up existing user to ensure fresh password hash
+    const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (existingAdmin) {
+      console.log("   🗑️  Deleting existing admin user to ensure fresh credentials...");
+      await prisma.user.delete({ where: { email: adminEmail } });
+    }
+
+    await auth.api.signUpEmail({
+      body: {
+        email: adminEmail,
+        password: "admin123!",
+        name: "Admin User",
+      },
+    });
+
+    // Update role and verify email
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: {
+        role: "admin",
+        emailVerified: true
+      }
+    });
+    console.log("   ✅ Created user: admin@idhesive.com (Role: admin)");
+
+    // Create Regular User
+    const userEmail = "user@idhesive.com";
+
+    // Clean up existing user to ensure fresh password hash
+    const existingUser = await prisma.user.findUnique({ where: { email: userEmail } });
+
+    if (existingUser) {
+      console.log("   🗑️  Deleting existing regular user to ensure fresh credentials...");
+      await prisma.user.delete({ where: { email: userEmail } });
+    }
+
+    await auth.api.signUpEmail({
+      body: {
+        email: userEmail,
+        password: "user123!",
+        name: "Regular User",
+      },
+    });
+
+    await prisma.user.update({
+      where: { email: userEmail },
+      data: {
+        role: "user",
+        emailVerified: true
+      }
+    });
+    console.log("   ✅ Created user: user@idhesive.com (Role: user)");
+
+  } catch (error) {
+    console.warn("   ⚠️  Error seeding users:", error);
+  }
   console.log("");
 
   // ============================================================================

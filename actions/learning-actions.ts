@@ -121,9 +121,9 @@ export async function getSubjectsWithProgress() {
 /**
  * Get subject details with topics
  */
-export async function getSubjectWithTopics(subjectId: string) {
+export async function getSubjectWithTopics(subjectId: string, grade?: number) {
   const user = await getAuthenticatedUser()
-  const userGrade = await getUserGradeLevel(user.id)
+  const userGrade = grade || await getUserGradeLevel(user.id)
 
   // First try to get subject with user's grade level
   let subject = await prisma.subject.findUnique({
@@ -434,12 +434,12 @@ export async function getUserLearningPaths() {
       completedItems,
       currentItem: currentItem
         ? {
-            id: currentItem.id,
-            topicId: currentItem.topicId,
-            topicName: currentItem.topic.name,
-            sortOrder: currentItem.sortOrder,
-            isCompleted: false,
-          }
+          id: currentItem.id,
+          topicId: currentItem.topicId,
+          topicName: currentItem.topic.name,
+          sortOrder: currentItem.sortOrder,
+          isCompleted: false,
+        }
         : null,
       estimatedHours,
       startedAt: lp.startedAt,

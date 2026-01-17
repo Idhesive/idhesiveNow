@@ -21,6 +21,7 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  role          String    @default("user")
   sessions      Session[]
   accounts      Account[]
 
@@ -1595,4 +1596,73 @@ model XpTransaction {
   @@index([userId, createdAt])
   @@index([source])
   @@map("xp_transaction")
+}
+
+// ============================================================================
+// CURRICULUM AGENT & DOCUMENT PROCESSING
+// ============================================================================
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PipelineStep {
+  PARSE
+  SPLIT
+  DB_SYNC
+  GRAPH_SYNC
+  RAG_SYNC
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model CurriculumDocument {
+  id          String         @id @default(uuid())
+  filename    String
+  fileUrl     String?        // Storage path
+  mimeType    String
+  size        Int
+  status      DocumentStatus @default(UPLOADED)
+  metadata    Json?          // Grade, Subject, etc. extraction result
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  steps       DocumentProcessingStep[]
+
+  @@map("curriculum_document")
+}
+
+model DocumentProcessingStep {
+  id          String             @id @default(uuid())
+  documentId  String
+  document    CurriculumDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  step        PipelineStep
+  status      StepStatus         @default(PENDING)
+  logs        String?            // Any error or info logs
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([documentId, step])
+  @@map("document_processing_step")
+}
+
+model CurriculumKnowledge {
+  id          String   @id @default(uuid())
+  documentId  String?
+  content     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("curriculum_knowledge")
 }

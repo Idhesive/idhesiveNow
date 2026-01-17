@@ -6,9 +6,10 @@ import { SubjectDetailContent } from "./subject-content"
 
 interface SubjectDetailPageProps {
   params: Promise<{ subjectId: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function SubjectDetailPage({ params }: SubjectDetailPageProps) {
+export default async function SubjectDetailPage({ params, searchParams }: SubjectDetailPageProps) {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -18,7 +19,9 @@ export default async function SubjectDetailPage({ params }: SubjectDetailPagePro
   }
 
   const { subjectId } = await params
-  const data = await getSubjectWithTopics(subjectId)
+  const { grade } = await searchParams
+  const gradeNum = grade ? parseInt(grade as string) : undefined
+  const data = await getSubjectWithTopics(subjectId, gradeNum)
 
   if (!data) {
     notFound()

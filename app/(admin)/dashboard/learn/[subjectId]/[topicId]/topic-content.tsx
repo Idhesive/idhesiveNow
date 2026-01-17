@@ -118,7 +118,7 @@ export function TopicLearnContent({ data, subjectId }: TopicLearnContentProps) {
           </div>
 
           <Button asChild>
-            <Link href={`/dashboard/practice?topic=${topic.id}`}>
+            <Link href={`/dashboard/practice/quiz/start?topic=${topic.id}`}>
               <PlayCircle className="h-4 w-4 mr-2" />
               Practice
             </Link>
@@ -283,7 +283,7 @@ export function TopicLearnContent({ data, subjectId }: TopicLearnContentProps) {
                   Tutorial content for this topic is coming soon.
                 </p>
                 <Button className="mt-4" asChild>
-                  <Link href={`/dashboard/practice?topic=${topic.id}`}>
+                  <Link href={`/dashboard/practice/quiz/start?topic=${topic.id}`}>
                     Jump to Practice
                   </Link>
                 </Button>
@@ -319,19 +319,19 @@ export function TopicLearnContent({ data, subjectId }: TopicLearnContentProps) {
               <PracticeOption
                 title="Quick Practice"
                 description="Answer 5 random questions from this topic"
-                href={`/dashboard/practice?topic=${topic.id}&mode=quick`}
+                href={`/dashboard/practice/quiz/start?topic=${topic.id}&mode=quick`}
                 icon={PlayCircle}
               />
               <PracticeOption
                 title="Full Assessment"
                 description="Complete a comprehensive assessment"
-                href={`/dashboard/practice?topic=${topic.id}&mode=assessment`}
+                href={`/dashboard/practice/quiz/start?topic=${topic.id}&mode=assessment`}
                 icon={Target}
               />
               <PracticeOption
                 title="Review Mistakes"
                 description="Practice questions you got wrong"
-                href={`/dashboard/practice?topic=${topic.id}&mode=review`}
+                href={`/dashboard/practice/quiz/start?topic=${topic.id}&mode=review`}
                 icon={BookOpen}
                 disabled={progress.answeredQuestions - progress.correctAnswers === 0}
               />
